@@ -33,6 +33,25 @@ module Xhr = {
     });
 };
 
+module Canvas = {
+  type ctx;
+
+  type imageData;
+
+  let getCanvas: string => ctx = [%bs.raw
+    {|
+      function(id) {
+        const canvas = document.getElementById(id)
+        return canvas.getContext("2d");
+      }
+  |}
+  ];
+
+  [@bs.send.pipe: ctx] external createImageData: (int, int) => imageData = "";
+
+  [@bs.set] external data: (imageData, int) => unit = "";
+};
+
 module Window = {
   type callbackId;
 

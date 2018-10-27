@@ -288,10 +288,7 @@ let reset = mmu => {
 };
 
 let read8 = (mmu, addr) => {
-  let foo = 0xf000 land 0xe000;
-  Js.log(Printf.sprintf("%x", foo));
-
-  Js.log(Printf.sprintf(">> %x", 0x8f10 land 0x1fff));
+  Js.log(Printf.sprintf("Reading %x", addr));
 
   /* switch on the first byte */
   switch (addr land 0xf000) {
@@ -335,5 +332,20 @@ let read8 = (mmu, addr) => {
     }
 
   | _ => 0x0000
+  };
+};
+
+/*
+     Read one byte then the next byte left shifted by 8 bits
+     It's little-endian, i.e.
+     0x34, 0x12
+     0x34 + (0x12 << 8) = 0x1234
+ */
+let read16 = (mmu, addr) => read8(mmu, addr) + read8(mmu, addr + 1) lsl 8;
+
+let write8 = (mmu, addr, v) => {
+  Js.log(Printf.sprintf("Writing %x to %x", addr, v));
+  switch (addr land 0xf000) {
+  | _ => mmu
   };
 };

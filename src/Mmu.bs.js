@@ -291,17 +291,8 @@ function reset(mmu) {
 
 function read8(mmu, addr) {
   console.log(Curry._1(Printf.sprintf(/* Format */[
-                /* Int */Block.__(4, [
-                    /* Int_x */6,
-                    /* No_padding */0,
-                    /* No_precision */0,
-                    /* End_of_format */0
-                  ]),
-                "%x"
-              ]), 57344));
-  console.log(Curry._1(Printf.sprintf(/* Format */[
                 /* String_literal */Block.__(11, [
-                    ">> ",
+                    "Reading ",
                     /* Int */Block.__(4, [
                         /* Int_x */6,
                         /* No_padding */0,
@@ -309,8 +300,8 @@ function read8(mmu, addr) {
                         /* End_of_format */0
                       ])
                   ]),
-                ">> %x"
-              ]), 3856));
+                "Reading %x"
+              ]), addr));
   var match = addr & 61440;
   var exit = 0;
   if (match >= 28673) {
@@ -385,8 +376,38 @@ function read8(mmu, addr) {
   
 }
 
+function read16(mmu, addr) {
+  return read8(mmu, addr) + (read8(mmu, addr + 1 | 0) << 8) | 0;
+}
+
+function write8(mmu, addr, v) {
+  console.log(Curry._2(Printf.sprintf(/* Format */[
+                /* String_literal */Block.__(11, [
+                    "Writing ",
+                    /* Int */Block.__(4, [
+                        /* Int_x */6,
+                        /* No_padding */0,
+                        /* No_precision */0,
+                        /* String_literal */Block.__(11, [
+                            " to ",
+                            /* Int */Block.__(4, [
+                                /* Int_x */6,
+                                /* No_padding */0,
+                                /* No_precision */0,
+                                /* End_of_format */0
+                              ])
+                          ])
+                      ])
+                  ]),
+                "Writing %x to %x"
+              ]), addr, v));
+  return mmu;
+}
+
 exports.bios = bios;
 exports.load = load;
 exports.reset = reset;
 exports.read8 = read8;
+exports.read16 = read16;
+exports.write8 = write8;
 /* No side effect */

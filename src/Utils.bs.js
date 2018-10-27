@@ -30,8 +30,18 @@ var Xhr = /* module */[
   /* openUri */openUri
 ];
 
+var getCanvas = (
+      function(id) {
+        const canvas = document.getElementById(id)
+        return canvas.getContext("2d");
+      }
+  );
+
+var Canvas = /* module */[/* getCanvas */getCanvas];
+
 var Window = /* module */[];
 
 exports.Xhr = Xhr;
+exports.Canvas = Canvas;
 exports.Window = Window;
 /* toArray Not a pure module */
