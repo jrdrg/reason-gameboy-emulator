@@ -289,7 +289,7 @@ function reset(mmu) {
         ];
 }
 
-function read8(mmu, addr) {
+function read8(addr, mmu) {
   console.log(Curry._1(Printf.sprintf(/* Format */[
                 /* String_literal */Block.__(11, [
                     "Reading ",
@@ -376,11 +376,11 @@ function read8(mmu, addr) {
   
 }
 
-function read16(mmu, addr) {
-  return read8(mmu, addr) + (read8(mmu, addr + 1 | 0) << 8) | 0;
+function read16(addr, mmu) {
+  return read8(addr, mmu) + (read8(addr + 1 | 0, mmu) << 8) | 0;
 }
 
-function write8(mmu, addr, v) {
+function write8(addr, mmu, v) {
   console.log(Curry._2(Printf.sprintf(/* Format */[
                 /* String_literal */Block.__(11, [
                     "Writing ",

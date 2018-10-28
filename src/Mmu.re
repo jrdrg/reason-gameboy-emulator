@@ -287,7 +287,7 @@ let reset = mmu => {
   workRam: Array.make(8192, 0),
 };
 
-let read8 = (mmu, addr) => {
+let read8 = (addr, mmu) => {
   Js.log(Printf.sprintf("Reading %x", addr));
 
   /* switch on the first byte */
@@ -341,9 +341,9 @@ let read8 = (mmu, addr) => {
      0x34, 0x12
      0x34 + (0x12 << 8) = 0x1234
  */
-let read16 = (mmu, addr) => read8(mmu, addr) + read8(mmu, addr + 1) lsl 8;
+let read16 = (addr, mmu) => read8(addr, mmu) + read8(addr + 1, mmu) lsl 8;
 
-let write8 = (mmu, addr, v) => {
+let write8 = (addr, mmu, v) => {
   Js.log(Printf.sprintf("Writing %x to %x", addr, v));
   switch (addr land 0xf000) {
   | _ => mmu
