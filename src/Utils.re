@@ -19,6 +19,9 @@ module Xhr = {
   external openUri: ([@bs.string] [ | `GET | `POST], string, bool) => unit =
     "open";
 
+  /*
+    Returns an array of bytes from the arrayBuffer
+   */
   let toArray: xhrResponse => array(int) = [%bs.raw
     {|function(response) { return new Uint8Array(response); }|}
   ];
@@ -38,7 +41,7 @@ module Canvas = {
 
   type imageData;
 
-  let getCanvas: string => ctx = [%bs.raw
+  let getContextFromId: string => ctx = [%bs.raw
     {|
       function(id) {
         const canvas = document.getElementById(id)
@@ -49,7 +52,10 @@ module Canvas = {
 
   [@bs.send.pipe: ctx] external createImageData: (int, int) => imageData = "";
 
-  [@bs.set] external data: (imageData, int) => unit = "";
+  [@bs.send.pipe: ctx]
+  external putImageData: (imageData, int, int) => unit = "";
+
+  [@bs.get] external data: imageData => array(int) = "";
 };
 
 module Window = {

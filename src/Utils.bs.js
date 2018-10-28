@@ -30,14 +30,14 @@ var Xhr = /* module */[
   /* openUri */openUri
 ];
 
-var getCanvas = (
+var getContextFromId = (
       function(id) {
         const canvas = document.getElementById(id)
         return canvas.getContext("2d");
       }
   );
 
-var Canvas = /* module */[/* getCanvas */getCanvas];
+var Canvas = /* module */[/* getContextFromId */getContextFromId];
 
 var Window = /* module */[];
 
