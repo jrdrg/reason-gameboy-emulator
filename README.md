@@ -1,5 +1,11 @@
 # gameboy
 
+Gameboy emulator written in ReasonML
+
+## Docs
+
+http://imrannazar.com/GameBoy-Emulation-in-JavaScript:-The-CPU
+
 ## Run Project
 
 ```sh
