@@ -1,24 +1,24 @@
 {
-	"name": "gameboy-emulator",
-	"version": "0.1.0",
-	"scripts": {
-		"build": "bsb -make-world",
-		"start": "bsb -make-world -w",
-		"clean": "bsb -clean-world",
-		"test": "echo \"Error: no test specified\" && exit 1",
-		"webpack": "webpack -w",
-		"webpack:production": "NODE_ENV=production webpack",
-		"serve": "ws"
-	},
-	"keywords": [
-		"BuckleScript"
-	],
-	"author": "",
-	"license": "MIT",
-	"devDependencies": {
-		"bs-platform": "^4.0.6",
-		"local-web-server": "^2.6.0",
-		"webpack": "^4.0.1",
-		"webpack-cli": "^3.1.1"
-	}
+  "name": "reason-gameboy-emulator",
+  "version": "0.1.0",
+  "scripts": {
+    "build": "bsb -make-world",
+    "start": "bsb -make-world -w",
+    "clean": "bsb -clean-world",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "webpack": "webpack -w",
+    "webpack:production": "NODE_ENV=production webpack",
+    "serve": "ws"
+  },
+  "keywords": [
+    "BuckleScript"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "bs-platform": "^4.0.6",
+    "local-web-server": "^2.6.0",
+    "webpack": "^4.0.1",
+    "webpack-cli": "^3.1.1"
+  }
 }
