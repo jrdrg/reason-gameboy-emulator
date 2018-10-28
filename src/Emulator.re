@@ -1,69 +1,75 @@
-/* http://gameboy.mongenel.com/dmg/opcodes.html */
 /* http://marc.rawer.de/Gameboy/Docs/GBCPUman.pdf */
-
-module Cpu = {
-  type registers = {
-    a: int,
-    b: int,
-    c: int,
-    d: int,
-    e: int,
-    h: int,
-    l: int,
-    f: int,
-    sp: int,
-    pc: int,
-  };
-  type t = {
-    clock: int,
-    registers,
-  };
-  let make = () => {
-    clock: 0,
-    registers: {
-      a: 0,
-      b: 0,
-      c: 0,
-      d: 0,
-      e: 0,
-      h: 0,
-      l: 0,
-      f: 0,
-      sp: 0,
-      pc: 0,
-    },
-  };
-};
 
 module Gpu = {
   type t = {
     canvas: Utils.Canvas.ctx,
+    screen: Utils.Canvas.imageData,
     vram: array(int),
     oam: array(int) /* 0xFE00 to 0xFE9F */
   };
-  let make = canvas => {
-    Js.log(canvas);
-    {canvas, vram: Array.make(8192, 0), oam: Array.make(160, 0)};
-  };
 
-  let reset = () => {};
+  let make = () => {
+    open Utils;
+    let canvas = Canvas.getContextFromId("screen");
+    let screen = canvas |> Utils.Canvas.createImageData(160, 144);
+    let screenData = screen |> Canvas.data;
+
+    /* initialize empty screen */
+    screenData |> Array.iteri((idx, _i) => screenData[idx] = 100);
+    canvas |> Canvas.putImageData(screen, 0, 0);
+
+    {canvas, screen, vram: Array.make(8192, 0), oam: Array.make(160, 0)};
+  };
 };
 
 type state = {
+  frameCount: int,
+  fps: int,
   gpu: Gpu.t,
   cpu: Cpu.t,
   mmu: Mmu.t,
-  rom: array(int),
 };
 
-let load = (bytes, canvas) => {
+let load = bytes => {
   Js.log2("Loaded, ROM length: ", Array.length(bytes));
   let mmu = Mmu.load(bytes);
-  let b = Mmu.read8(mmu, 0x0001);
+  let b = mmu |> Mmu.read8(0x0002);
   Js.log2("Byte:", b);
-  {rom: bytes, gpu: Gpu.make(canvas), cpu: Cpu.make(), mmu};
+  {fps: 0, frameCount: 0, gpu: Gpu.make(), cpu: Cpu.make(), mmu};
 };
 
-let reset = state => {...state, mmu: state.mmu |> Mmu.reset};
+let reset = state => {
+  ...state,
+  fps: 0,
+  frameCount: state.frameCount + 1,
+  mmu: Mmu.reset(state.mmu),
+  gpu: Gpu.make(),
+};
 
-let frame = (s: state) => s;
+let frame = (s: state) => {
+  /* increment program counter by 1 */
+  let programCount = Cpu.programCount(s.cpu) + 1;
+  let cpuIncPc = {
+    ...s.cpu,
+    registers: {
+      ...s.cpu.registers,
+      pc: programCount,
+    },
+  };
+  let (cpu, mmu) = Cpu.exec(programCount, cpuIncPc, s.mmu);
+  let nextState = {
+    ...s,
+    mmu,
+    cpu: {
+      registers: {
+        ...cpu.registers,
+        /* wrap around pc if it's more than 2 bytes */
+        pc: cpu.registers.pc land 65535,
+      },
+      clock: cpu.clock + cpu.registers.mCycles,
+    },
+  };
+  /* GPU draw */
+  /* update timer */
+  nextState;
+};

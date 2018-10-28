@@ -15,7 +15,4 @@ let foo =
        Js.log(bytes);
        resolve(bytes);
      })
-  |> then_(bytes => {
-       let canvas = Canvas.getCanvas("screen");
-       resolve(Emulator.load(bytes, canvas) |> loop);
-     });
+  |> then_(bytes => resolve(Emulator.load(bytes) |> loop));
