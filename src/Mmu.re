@@ -289,31 +289,26 @@ let reset = mmu => {
 
 let read8 = (addr, mmu) => {
   Js.log(Printf.sprintf("Reading %x", addr));
-
   /* switch on the first byte */
   switch (addr land 0xf000) {
   | 0x0000 =>
-    switch (mmu.finishedBios, addr <= 0xff) {
-    | (false, true) => bios[addr]
-    | (true, _) => mmu.rom[addr]
-    | _ => mmu.rom[addr]
+    switch (mmu.finishedBios, addr <= 0xff, addr === 0x100) {
+    | (false, true, _) => (bios[addr], mmu)
+    | (false, _, true) => (bios[addr], {...mmu, finishedBios: true})
+    | (true, _, _) => (mmu.rom[addr], mmu)
+    | _ => (mmu.rom[addr], mmu)
     }
-
   | 0x1000
   | 0x2000
-  | 0x3000 => mmu.rom[addr]
-
+  | 0x3000 => (mmu.rom[addr], mmu)
   | 0x4000
   | 0x5000
   | 0x6000
-  | 0x7000 => (-1) /* ROM bank from cartridge */
-
+  | 0x7000 => ((-1), mmu) /* ROM bank from cartridge */
   | 0x8000
-  | 0x9000 => (-1) /* Video RAM */
-
+  | 0x9000 => ((-1), mmu) /* Video RAM */
   | 0xA000
-  | 0xB000 => (-1) /* External RAM */
-
+  | 0xB000 => ((-1), mmu) /* External RAM */
   /*
     Work RAM
     This removes the first nibble of the address
@@ -322,16 +317,14 @@ let read8 = (addr, mmu) => {
    */
   | 0xC000
   | 0xD000
-  | 0xE000 => mmu.workRam[addr land 0x1fff]
-
+  | 0xE000 => (mmu.workRam[addr land 0x1fff], mmu)
   | 0xF000 =>
     switch (addr land 0x0f00) {
-    | 0xE00 => (-1) /* OAM */
-    | 0xF00 => (-1) /* hardware stuff */
-    | _ => mmu.workRam[addr land 0x1fff] /* same as Work RAM above */
+    | 0xE00 => ((-1), mmu) /* OAM */
+    | 0xF00 => ((-1), mmu) /* hardware stuff */
+    | _ => (mmu.workRam[addr land 0x1fff], mmu) /* same as Work RAM above */
     }
-
-  | _ => 0x0000
+  | _ => (0x0000, mmu)
   };
 };
 
@@ -341,11 +334,23 @@ let read8 = (addr, mmu) => {
      0x34, 0x12
      0x34 + (0x12 << 8) = 0x1234
  */
-let read16 = (addr, mmu) => read8(addr, mmu) + read8(addr + 1, mmu) lsl 8;
+let read16 = (addr, mmu) => {
+  let (a, mmu1) = read8(addr, mmu);
+  let (b, mmu2) = read8(addr + 1, mmu1);
+  let c = b lsl 8;
+  /* read8(addr, mmu) + read8(addr + 1, mmu) lsl 8 */
+  (a + c, mmu2);
+};
 
-let write8 = (addr, mmu, v) => {
+let write8 = (addr, v, mmu: t) => {
   Js.log(Printf.sprintf("Writing %x to %x", addr, v));
   switch (addr land 0xf000) {
+  /* | 0x0000 | 0x1000  => */
+  | 0x6000
+  | 0x7000 =>
+    /* select memory model to use - 0: 16/8 mode, 1: 4/32 mode */
+    let mode = v land 0x1;
+    mmu;
   | _ => mmu
   };
 };
