@@ -1,9 +1,15 @@
 {
 	"name": "gameboy-emulator",
-	"sources": {
-		"dir": "src",
-		"subdirs": true
-	},
+	"sources": [
+		{
+			"dir": "src",
+			"subdirs": true
+		},
+		{
+			"dir": "__tests__",
+			"type": "dev"
+		}
+	],
 	"package-specs": [
 		{
 			"module": "commonjs",
@@ -13,5 +19,8 @@
 	"suffix": ".bs.js",
 	"namespace": true,
 	"bs-dependencies": [],
+	"bs-dev-dependencies": [
+		"@glennsl/bs-jest"
+	],
 	"refmt": 3
 }
