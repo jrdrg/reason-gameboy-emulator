@@ -5,6 +5,9 @@ Gameboy emulator written in ReasonML
 ## Docs
 
 http://imrannazar.com/GameBoy-Emulation-in-JavaScript:-The-CPU
+http://marc.rawer.de/Gameboy/Docs/GBCPUman.pdf
+http://www.pastraiser.com/cpu/gameboy/gameboy_opcodes.html
+https://fms.komkon.org/GameBoy/Tech/Software.html
 
 ## Run Project
 
