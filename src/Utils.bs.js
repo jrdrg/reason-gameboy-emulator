@@ -5,14 +5,14 @@ var Curry = require("bs-platform/lib/js/curry.js");
 
 var toArray = (function(response) { return new Uint8Array(response); });
 
-function openUri(method_, uri, xhr) {
+function openUri(method__, uri, xhr) {
   return new Promise((function (resolve, _) {
                 xhr.onload = (function () {
                     return resolve(Curry._1(toArray, xhr.response));
                   });
                 xhr.responseType = "arraybuffer";
                 xhr.open((function () {
-                          switch (method_) {
+                          switch (method__) {
                             case 3546230 : 
                                 return "GET";
                             case 891112544 : 

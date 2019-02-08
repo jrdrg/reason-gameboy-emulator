@@ -266,6 +266,7 @@ type t = {
   externalRam: array(int),
   videoRam: array(int),
   workRam: array(int),
+  zeroPageRam: array(int),
 };
 
 let load = bytes => {
@@ -276,6 +277,7 @@ let load = bytes => {
   externalRam: [||],
   videoRam: [||],
   workRam: [||],
+  zeroPageRam: [||],
 };
 
 let reset = mmu => {
@@ -285,10 +287,11 @@ let reset = mmu => {
   externalRam: Array.make(8192, 0),
   videoRam: Array.make(8192, 0),
   workRam: Array.make(8192, 0),
+  zeroPageRam: Array.make(128, 0),
 };
 
 let read8 = (addr, mmu) => {
-  Js.log(Printf.sprintf("Reading %x", addr));
+  Js.log(Printf.sprintf("Reading byte %x", addr));
   /* switch on the first byte */
   switch (addr land 0xf000) {
   | 0x0000 =>
@@ -304,7 +307,7 @@ let read8 = (addr, mmu) => {
   | 0x4000
   | 0x5000
   | 0x6000
-  | 0x7000 => ((-1), mmu) /* ROM bank from cartridge */
+  | 0x7000 => (mmu.rom[addr], mmu) /* ROM bank from cartridge */
   | 0x8000
   | 0x9000 => ((-1), mmu) /* Video RAM */
   | 0xA000
@@ -320,11 +323,15 @@ let read8 = (addr, mmu) => {
   | 0xE000 => (mmu.workRam[addr land 0x1fff], mmu)
   | 0xF000 =>
     switch (addr land 0x0f00) {
-    | 0xE00 => ((-1), mmu) /* OAM */
-    | 0xF00 => ((-1), mmu) /* hardware stuff */
+    | 0xE00 => (0, mmu) /* OAM */
+    | 0xF00 =>
+      switch (addr) {
+      | a when a >= 0xFF80 => (mmu.zeroPageRam[addr land 0x7f], mmu)
+      | _ => (0, mmu)
+      }
     | _ => (mmu.workRam[addr land 0x1fff], mmu) /* same as Work RAM above */
     }
-  | _ => (0x0000, mmu)
+  | _ => (0, mmu)
   };
 };
 
@@ -335,11 +342,11 @@ let read8 = (addr, mmu) => {
      0x34 + (0x12 << 8) = 0x1234
  */
 let read16 = (addr, mmu) => {
-  let (a, mmu1) = read8(addr, mmu);
-  let (b, mmu2) = read8(addr + 1, mmu1);
+  Js.log(Printf.sprintf("Reading word %x", addr));
+  let (a, mmu) = read8(addr, mmu);
+  let (b, mmu) = read8(addr + 1, mmu);
   let c = b lsl 8;
-  /* read8(addr, mmu) + read8(addr + 1, mmu) lsl 8 */
-  (a + c, mmu2);
+  (a + c, mmu);
 };
 
 let write8 = (addr, v, mmu: t) => {

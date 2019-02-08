@@ -266,24 +266,8 @@ function ld_bc_nn(cpu, mmu) {
 function ld_m_bc_a(cpu, mmu) {
   var match = cpu[/* registers */1];
   var mmuWrite = Mmu$GameboyEmulator.write8(rBc(cpu), match[/* a */0], mmu);
-  var init = cpu[/* registers */1];
   return /* tuple */[
-          /* record */[
-            /* clock */cpu[/* clock */0],
-            /* registers : record */[
-              /* a */init[/* a */0],
-              /* b */init[/* b */1],
-              /* c */init[/* c */2],
-              /* d */init[/* d */3],
-              /* e */init[/* e */4],
-              /* h */init[/* h */5],
-              /* l */init[/* l */6],
-              /* f */init[/* f */7],
-              /* sp */init[/* sp */8],
-              /* pc */init[/* pc */9],
-              /* mCycles */2
-            ]
-          ],
+          machineCycles(2, cpu),
           mmuWrite
         ];
 }

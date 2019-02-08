@@ -158,7 +158,7 @@ let machineCycles = (cycles, cpu) => {
 };
 
 module Ops = {
-  let nop = (cpu, mmu) => (machineCycles(1, cpu), mmu);
+  let nop = (cpu, mmu: Mmu.t) => (machineCycles(1, cpu), mmu);
   let ld_bc_nn = (cpu, mmu) => {
     let pc = programCount(cpu);
     let (c, m) = mmu |> Mmu.read8(pc);
@@ -168,16 +168,10 @@ module Ops = {
       m1,
     );
   };
-  let ld_m_bc_a = (cpu, mmu: Mmu.t) => {
+  let ld_m_bc_a = (cpu, mmu) => {
     let {a} = cpu.registers;
     let mmuWrite = Mmu.write8(rBc(cpu), a, mmu);
-    ({
-       ...cpu,
-       registers: {
-         ...cpu.registers,
-         mCycles: 2,
-       },
-     }, mmuWrite);
+    (cpu |> machineCycles(2), mmuWrite);
   };
   let inc_bc = (cpu, mmu) => {
     let c = (cpu.registers.c + 1) land 0xff; /* wrap after 255, i.e. 256 = 0 */

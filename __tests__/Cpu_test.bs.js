@@ -2,7 +2,9 @@
 'use strict';
 
 var Jest = require("@glennsl/bs-jest/src/jest.js");
+var Caml_array = require("bs-platform/lib/js/caml_array.js");
 var Cpu$GameboyEmulator = require("../src/Cpu.bs.js");
+var Mmu$GameboyEmulator = require("../src/Mmu.bs.js");
 
 describe("Cpu", (function () {
         describe("Flags", (function () {
@@ -42,6 +44,42 @@ describe("Cpu", (function () {
                 return Jest.test("Setting a flag with an initial value", (function () {
                               var cpu = Cpu$GameboyEmulator.setFlag(/* Z */0, 1, 16, Cpu$GameboyEmulator.make(/* () */0));
                               return Jest.Expect[/* toBe */2](144, Jest.Expect[/* expect */0](cpu[/* registers */1][/* f */7]));
+                            }));
+              }));
+        describe("Ops", (function () {
+                return Jest.test("INC BC", (function () {
+                              var c = Cpu$GameboyEmulator.make(/* () */0);
+                              var init = c[/* registers */1];
+                              var cpu_000 = /* clock */c[/* clock */0];
+                              var cpu_001 = /* registers : record */[
+                                /* a */init[/* a */0],
+                                /* b */init[/* b */1],
+                                /* c */255,
+                                /* d */init[/* d */3],
+                                /* e */init[/* e */4],
+                                /* h */init[/* h */5],
+                                /* l */init[/* l */6],
+                                /* f */init[/* f */7],
+                                /* sp */init[/* sp */8],
+                                /* pc */init[/* pc */9],
+                                /* mCycles */init[/* mCycles */10]
+                              ];
+                              var cpu = /* record */[
+                                cpu_000,
+                                cpu_001
+                              ];
+                              var mmu = Mmu$GameboyEmulator.load(Caml_array.caml_make_vect(4096, 0));
+                              var match = Cpu$GameboyEmulator.Ops[/* inc_bc */3](cpu, mmu);
+                              var cpu1 = match[0];
+                              return Jest.Expect[/* toEqual */12](/* tuple */[
+                                          256,
+                                          1,
+                                          0
+                                        ], Jest.Expect[/* expect */0](/* tuple */[
+                                              Cpu$GameboyEmulator.rBc(cpu1),
+                                              cpu1[/* registers */1][/* b */1],
+                                              cpu1[/* registers */1][/* c */2]
+                                            ]));
                             }));
               }));
         return /* () */0;

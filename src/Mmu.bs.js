@@ -273,7 +273,8 @@ function load(bytes) {
           /* rom */bytes,
           /* externalRam : array */[],
           /* videoRam : array */[],
-          /* workRam : array */[]
+          /* workRam : array */[],
+          /* zeroPageRam : array */[]
         ];
 }
 
@@ -285,14 +286,15 @@ function reset(mmu) {
           /* rom */mmu[/* rom */3],
           /* externalRam */Caml_array.caml_make_vect(8192, 0),
           /* videoRam */Caml_array.caml_make_vect(8192, 0),
-          /* workRam */Caml_array.caml_make_vect(8192, 0)
+          /* workRam */Caml_array.caml_make_vect(8192, 0),
+          /* zeroPageRam */Caml_array.caml_make_vect(128, 0)
         ];
 }
 
 function read8(addr, mmu) {
   console.log(Curry._1(Printf.sprintf(/* Format */[
                 /* String_literal */Block.__(11, [
-                    "Reading ",
+                    "Reading byte ",
                     /* Int */Block.__(4, [
                         /* Int_x */6,
                         /* No_padding */0,
@@ -300,7 +302,7 @@ function read8(addr, mmu) {
                         /* End_of_format */0
                       ])
                   ]),
-                "Reading %x"
+                "Reading byte %x"
               ]), addr));
   var match = addr & 61440;
   var exit = 0;
@@ -315,20 +317,32 @@ function read8(addr, mmu) {
                   ];
           } else {
             var match$1 = addr & 3840;
-            if (match$1 !== 3584 && match$1 !== 3840) {
-              return /* tuple */[
-                      Caml_array.caml_array_get(mmu[/* workRam */6], addr & 8191),
-                      mmu
-                    ];
+            if (match$1 !== 3584) {
+              if (match$1 !== 3840) {
+                return /* tuple */[
+                        Caml_array.caml_array_get(mmu[/* workRam */6], addr & 8191),
+                        mmu
+                      ];
+              } else if (addr >= 65408) {
+                return /* tuple */[
+                        Caml_array.caml_array_get(mmu[/* zeroPageRam */7], addr & 127),
+                        mmu
+                      ];
+              } else {
+                return /* tuple */[
+                        0,
+                        mmu
+                      ];
+              }
             } else {
               return /* tuple */[
-                      -1,
+                      0,
                       mmu
                     ];
             }
           }
         } else {
-          exit = 2;
+          exit = 3;
         }
       } else if (match !== 49152 && match < 53248) {
         return /* tuple */[
@@ -336,7 +350,7 @@ function read8(addr, mmu) {
                 mmu
               ];
       } else {
-        exit = 2;
+        exit = 3;
       }
     } else if (match >= 36865) {
       if (match !== 40960 && match < 45056) {
@@ -369,10 +383,7 @@ function read8(addr, mmu) {
                 mmu
               ];
       } else {
-        return /* tuple */[
-                -1,
-                mmu
-              ];
+        exit = 2;
       }
     } else if (match !== 16384 && match < 20480) {
       return /* tuple */[
@@ -380,10 +391,7 @@ function read8(addr, mmu) {
               mmu
             ];
     } else {
-      return /* tuple */[
-              -1,
-              mmu
-            ];
+      exit = 2;
     }
   } else if (match >= 4097) {
     if (match !== 8192 && match < 12288) {
@@ -427,7 +435,8 @@ function read8(addr, mmu) {
                 /* rom */mmu[/* rom */3],
                 /* externalRam */mmu[/* externalRam */4],
                 /* videoRam */mmu[/* videoRam */5],
-                /* workRam */mmu[/* workRam */6]
+                /* workRam */mmu[/* workRam */6],
+                /* zeroPageRam */mmu[/* zeroPageRam */7]
               ]
             ];
     } else {
@@ -439,11 +448,12 @@ function read8(addr, mmu) {
   }
   switch (exit) {
     case 1 : 
+    case 2 :
         return /* tuple */[
                 Caml_array.caml_array_get(mmu[/* rom */3], addr),
                 mmu
               ];
-    case 2 : 
+    case 3 :
         return /* tuple */[
                 Caml_array.caml_array_get(mmu[/* workRam */6], addr & 8191),
                 mmu
@@ -453,6 +463,18 @@ function read8(addr, mmu) {
 }
 
 function read16(addr, mmu) {
+  console.log(Curry._1(Printf.sprintf(/* Format */[
+                /* String_literal */Block.__(11, [
+                    "Reading word ",
+                    /* Int */Block.__(4, [
+                        /* Int_x */6,
+                        /* No_padding */0,
+                        /* No_precision */0,
+                        /* End_of_format */0
+                      ])
+                  ]),
+                "Reading word %x"
+              ]), addr));
   var match = read8(addr, mmu);
   var match$1 = read8(addr + 1 | 0, match[1]);
   var c = (match$1[0] << 8);
