@@ -34,7 +34,8 @@ describe("Cpu", () => {
         },
       };
       let mmu = Mmu.load(Array.make(4096, 0));
-      let (cpu1, _) = Cpu.Ops.inc_bc(cpu, mmu);
+      let gpu = Gpu.make();
+      let (cpu1, _) = Cpu.Ops.inc_bc(cpu, mmu, gpu);
       expect((Cpu.rBc(cpu1), cpu1.registers.b, cpu1.registers.c))
       |> toEqual((256, 0x1, 0x0));
     })

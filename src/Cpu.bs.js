@@ -240,14 +240,14 @@ function machineCycles(cycles, cpu) {
         ];
 }
 
-function nop(cpu, mmu) {
+function nop(cpu, mmu, _) {
   return /* tuple */[
           machineCycles(1, cpu),
           mmu
         ];
 }
 
-function ld_bc_nn(cpu, mmu) {
+function ld_bc_nn(cpu, mmu, _) {
   var pc = cpu[/* registers */1][/* pc */9];
   var match = Mmu$GameboyEmulator.read8(pc, mmu);
   var match$1 = Mmu$GameboyEmulator.read8(pc + 1 | 0, match[1]);
@@ -263,22 +263,22 @@ function ld_bc_nn(cpu, mmu) {
         ];
 }
 
-function ld_m_bc_a(cpu, mmu) {
+function ld_m_bc_a(cpu, mmu, gpu) {
   var match = cpu[/* registers */1];
-  var mmuWrite = Mmu$GameboyEmulator.write8(rBc(cpu), match[/* a */0], mmu);
+  var match$1 = Mmu$GameboyEmulator.write8(rBc(cpu), match[/* a */0], mmu, gpu);
   return /* tuple */[
           machineCycles(2, cpu),
-          mmuWrite
+          match$1[0]
         ];
 }
 
-function inc_bc(cpu, mmu) {
+function inc_bc(cpu, mmu, _) {
   var c = cpu[/* registers */1][/* c */2] + 1 & 255;
   var b = c === 0 ? cpu[/* registers */1][/* b */1] + 1 | 0 : cpu[/* registers */1][/* b */1];
   var arg = b;
   var arg$1 = c;
   return /* tuple */[
-          machineCycles(3, (function (param) {
+          machineCycles(2, (function (param) {
                       return (function (param$1, param$2, param$3, param$4, param$5) {
                           return setRegisters(param, arg, arg$1, param$1, param$2, param$3, param$4, param$5);
                         });
@@ -287,35 +287,49 @@ function inc_bc(cpu, mmu) {
         ];
 }
 
-function inc_b(cpu, mmu) {
+function inc_b(cpu, mmu, _) {
   var b = cpu[/* registers */1][/* b */1] + 1 & 255;
   var f = cpu[/* registers */1][/* f */7] & 16;
   var arg = b;
   return /* tuple */[
-          setFlag$1(/* Z */0, b === 0 ? 1 : 0, f, (function (param) {
-                      return (function (param$1, param$2, param$3, param$4, param$5, param$6) {
-                          return setRegisters(param, arg, param$1, param$2, param$3, param$4, param$5, param$6);
-                        });
-                    })(undefined)(undefined, undefined, undefined, undefined, undefined, cpu)),
-          mmu
-        ];
-}
-
-function dec_b(cpu, mmu) {
-  var b = cpu[/* registers */1][/* b */1] - 1 & 255;
-  var f = cpu[/* registers */1][/* f */7] & 16;
-  var arg = b;
-  return /* tuple */[
-          (function (eta) {
-                var param = undefined;
-                var param$1 = eta;
-                return setFlag$1(/* N */1, 1, param, param$1);
-              })(setFlag$1(/* Z */0, b === 0 ? 1 : 0, f, (function (param) {
+          machineCycles(1, setFlag$1(/* Z */0, b === 0 ? 1 : 0, f, (function (param) {
                           return (function (param$1, param$2, param$3, param$4, param$5, param$6) {
                               return setRegisters(param, arg, param$1, param$2, param$3, param$4, param$5, param$6);
                             });
                         })(undefined)(undefined, undefined, undefined, undefined, undefined, cpu))),
           mmu
+        ];
+}
+
+function dec_b(cpu, mmu, _) {
+  var b = cpu[/* registers */1][/* b */1] - 1 & 255;
+  var f = cpu[/* registers */1][/* f */7] & 16;
+  var arg = b;
+  return /* tuple */[
+          machineCycles(2, (function (eta) {
+                    var param = undefined;
+                    var param$1 = eta;
+                    return setFlag$1(/* N */1, 1, param, param$1);
+                  })(setFlag$1(/* Z */0, b === 0 ? 1 : 0, f, (function (param) {
+                              return (function (param$1, param$2, param$3, param$4, param$5, param$6) {
+                                  return setRegisters(param, arg, param$1, param$2, param$3, param$4, param$5, param$6);
+                                });
+                            })(undefined)(undefined, undefined, undefined, undefined, undefined, cpu)))),
+          mmu
+        ];
+}
+
+function ld_b_n(cpu, mmu, _) {
+  var pc = cpu[/* registers */1][/* pc */9];
+  var match = Mmu$GameboyEmulator.read8(pc, mmu);
+  var arg = match[0];
+  return /* tuple */[
+          incrementPc(1, machineCycles(2, (function (param) {
+                          return (function (param$1, param$2, param$3, param$4, param$5, param$6) {
+                              return setRegisters(param, arg, param$1, param$2, param$3, param$4, param$5, param$6);
+                            });
+                        })(undefined)(undefined, undefined, undefined, undefined, undefined, cpu))),
+          match[1]
         ];
 }
 
@@ -325,11 +339,40 @@ var Ops = /* module */[
   /* ld_m_bc_a */ld_m_bc_a,
   /* inc_bc */inc_bc,
   /* inc_b */inc_b,
-  /* dec_b */dec_b
+  /* dec_b */dec_b,
+  /* ld_b_n */ld_b_n
 ];
 
 function exec(instruction) {
-  if (instruction > 5 || instruction < 0) {
+  var exit = 0;
+  if (instruction >= 7) {
+    if (instruction >= 256) {
+      exit = 1;
+    } else {
+      return nop;
+    }
+  } else if (instruction >= 0) {
+    switch (instruction) {
+      case 0 : 
+          return nop;
+      case 1 : 
+          return ld_bc_nn;
+      case 2 : 
+          return ld_m_bc_a;
+      case 3 : 
+          return inc_bc;
+      case 4 : 
+          return inc_b;
+      case 5 : 
+          return dec_b;
+      case 6 : 
+          return ld_b_n;
+      
+    }
+  } else {
+    exit = 1;
+  }
+  if (exit === 1) {
     throw [
           UnhandledInstruction,
           Curry._1(Printf.sprintf(/* Format */[
@@ -348,23 +391,8 @@ function exec(instruction) {
                     "Unhandled instruction, %#2x"
                   ]), instruction)
         ];
-  } else {
-    switch (instruction) {
-      case 0 : 
-          return nop;
-      case 1 : 
-          return ld_bc_nn;
-      case 2 : 
-          return ld_m_bc_a;
-      case 3 : 
-          return inc_bc;
-      case 4 : 
-          return inc_b;
-      case 5 : 
-          return dec_b;
-      
-    }
   }
+  
 }
 
 exports.Flags = Flags;

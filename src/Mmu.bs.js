@@ -269,10 +269,8 @@ function load(bytes) {
   return /* record */[
           /* finishedBios */true,
           /* cartType */Caml_array.caml_array_get(bytes, 327),
-          /* oam : array */[],
           /* rom */bytes,
           /* externalRam : array */[],
-          /* videoRam : array */[],
           /* workRam : array */[],
           /* zeroPageRam : array */[]
         ];
@@ -282,10 +280,8 @@ function reset(mmu) {
   return /* record */[
           /* finishedBios */false,
           /* cartType */mmu[/* cartType */1],
-          /* oam : array */[],
-          /* rom */mmu[/* rom */3],
+          /* rom */mmu[/* rom */2],
           /* externalRam */Caml_array.caml_make_vect(8192, 0),
-          /* videoRam */Caml_array.caml_make_vect(8192, 0),
           /* workRam */Caml_array.caml_make_vect(8192, 0),
           /* zeroPageRam */Caml_array.caml_make_vect(128, 0)
         ];
@@ -320,12 +316,12 @@ function read8(addr, mmu) {
             if (match$1 !== 3584) {
               if (match$1 !== 3840) {
                 return /* tuple */[
-                        Caml_array.caml_array_get(mmu[/* workRam */6], addr & 8191),
+                        Caml_array.caml_array_get(mmu[/* workRam */4], addr & 8191),
                         mmu
                       ];
               } else if (addr >= 65408) {
                 return /* tuple */[
-                        Caml_array.caml_array_get(mmu[/* zeroPageRam */7], addr & 127),
+                        Caml_array.caml_array_get(mmu[/* zeroPageRam */5], addr & 127),
                         mmu
                       ];
               } else {
@@ -417,7 +413,7 @@ function read8(addr, mmu) {
     var match$4 = addr === 256;
     if (match$2) {
       return /* tuple */[
-              Caml_array.caml_array_get(mmu[/* rom */3], addr),
+              Caml_array.caml_array_get(mmu[/* rom */2], addr),
               mmu
             ];
     } else if (match$3) {
@@ -431,31 +427,29 @@ function read8(addr, mmu) {
               /* record */[
                 /* finishedBios */true,
                 /* cartType */mmu[/* cartType */1],
-                /* oam */mmu[/* oam */2],
-                /* rom */mmu[/* rom */3],
-                /* externalRam */mmu[/* externalRam */4],
-                /* videoRam */mmu[/* videoRam */5],
-                /* workRam */mmu[/* workRam */6],
-                /* zeroPageRam */mmu[/* zeroPageRam */7]
+                /* rom */mmu[/* rom */2],
+                /* externalRam */mmu[/* externalRam */3],
+                /* workRam */mmu[/* workRam */4],
+                /* zeroPageRam */mmu[/* zeroPageRam */5]
               ]
             ];
     } else {
       return /* tuple */[
-              Caml_array.caml_array_get(mmu[/* rom */3], addr),
+              Caml_array.caml_array_get(mmu[/* rom */2], addr),
               mmu
             ];
     }
   }
   switch (exit) {
     case 1 : 
-    case 2 :
+    case 2 : 
         return /* tuple */[
-                Caml_array.caml_array_get(mmu[/* rom */3], addr),
+                Caml_array.caml_array_get(mmu[/* rom */2], addr),
                 mmu
               ];
-    case 3 :
+    case 3 : 
         return /* tuple */[
-                Caml_array.caml_array_get(mmu[/* workRam */6], addr & 8191),
+                Caml_array.caml_array_get(mmu[/* workRam */4], addr & 8191),
                 mmu
               ];
     
@@ -484,7 +478,7 @@ function read16(addr, mmu) {
         ];
 }
 
-function write8(addr, v, mmu) {
+function write8(addr, v, mmu, gpu) {
   console.log(Curry._2(Printf.sprintf(/* Format */[
                 /* String_literal */Block.__(11, [
                     "Writing ",
@@ -505,7 +499,24 @@ function write8(addr, v, mmu) {
                   ]),
                 "Writing %x to %x"
               ]), addr, v));
-  return mmu;
+  var match = addr & 61440;
+  var exit = 0;
+  if (match >= 28673 && !(match !== 32768 && match !== 36864)) {
+    exit = 1;
+  } else {
+    return /* tuple */[
+            mmu,
+            gpu
+          ];
+  }
+  if (exit === 1) {
+    Caml_array.caml_array_set(gpu[/* vram */5], addr & 8191, v);
+    return /* tuple */[
+            mmu,
+            gpu
+          ];
+  }
+  
 }
 
 exports.bios = bios;

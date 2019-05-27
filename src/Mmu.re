@@ -261,10 +261,8 @@ let bios = [|
 type t = {
   finishedBios: bool,
   cartType: int,
-  oam: array(int),
   rom: array(int),
   externalRam: array(int),
-  videoRam: array(int),
   workRam: array(int),
   zeroPageRam: array(int),
 };
@@ -272,10 +270,8 @@ type t = {
 let load = bytes => {
   finishedBios: true,
   cartType: bytes[0x147], /* from docs - http://gameboy.mongenel.com/dmg/asmmemmap.html */
-  oam: [||],
   rom: bytes,
   externalRam: [||],
-  videoRam: [||],
   workRam: [||],
   zeroPageRam: [||],
 };
@@ -283,9 +279,7 @@ let load = bytes => {
 let reset = mmu => {
   ...mmu,
   finishedBios: false,
-  oam: [||],
   externalRam: Array.make(8192, 0),
-  videoRam: Array.make(8192, 0),
   workRam: Array.make(8192, 0),
   zeroPageRam: Array.make(128, 0),
 };
@@ -349,7 +343,8 @@ let read16 = (addr, mmu) => {
   (a + c, mmu);
 };
 
-let write8 = (addr, v, mmu: t) => {
+let write8 = (addr, v, mmu, gpu: Gpu.t) => {
+  /* let {mmu, gpu} = state; */
   Js.log(Printf.sprintf("Writing %x to %x", addr, v));
   switch (addr land 0xf000) {
   /* | 0x0000 | 0x1000  => */
@@ -357,7 +352,11 @@ let write8 = (addr, v, mmu: t) => {
   | 0x7000 =>
     /* select memory model to use - 0: 16/8 mode, 1: 4/32 mode */
     let mode = v land 0x1;
-    mmu;
-  | _ => mmu
+    (mmu, gpu);
+  | 0x8000
+  | 0x9000 =>
+    gpu.vram[addr land 0x1fff] = v;
+    (mmu, gpu);
+  | _ => (mmu, gpu)
   };
 };

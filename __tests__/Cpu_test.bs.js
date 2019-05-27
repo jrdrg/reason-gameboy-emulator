@@ -4,6 +4,7 @@
 var Jest = require("@glennsl/bs-jest/src/jest.js");
 var Caml_array = require("bs-platform/lib/js/caml_array.js");
 var Cpu$GameboyEmulator = require("../src/Cpu.bs.js");
+var Gpu$GameboyEmulator = require("../src/Gpu.bs.js");
 var Mmu$GameboyEmulator = require("../src/Mmu.bs.js");
 
 describe("Cpu", (function () {
@@ -69,7 +70,8 @@ describe("Cpu", (function () {
                                 cpu_001
                               ];
                               var mmu = Mmu$GameboyEmulator.load(Caml_array.caml_make_vect(4096, 0));
-                              var match = Cpu$GameboyEmulator.Ops[/* inc_bc */3](cpu, mmu);
+                              var gpu = Gpu$GameboyEmulator.make(/* () */0);
+                              var match = Cpu$GameboyEmulator.Ops[/* inc_bc */3](cpu, mmu, gpu);
                               var cpu1 = match[0];
                               return Jest.Expect[/* toEqual */12](/* tuple */[
                                           256,
