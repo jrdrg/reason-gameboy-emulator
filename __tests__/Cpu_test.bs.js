@@ -2,6 +2,7 @@
 'use strict';
 
 var Jest = require("@glennsl/bs-jest/src/jest.js");
+var Curry = require("bs-platform/lib/js/curry.js");
 var Caml_array = require("bs-platform/lib/js/caml_array.js");
 var Cpu$GameboyEmulator = require("../src/Cpu.bs.js");
 var Gpu$GameboyEmulator = require("../src/Gpu.bs.js");
@@ -48,39 +49,76 @@ describe("Cpu", (function () {
                             }));
               }));
         describe("Ops", (function () {
-                return Jest.test("INC BC", (function () {
-                              var c = Cpu$GameboyEmulator.make(/* () */0);
-                              var init = c[/* registers */1];
-                              var cpu_000 = /* clock */c[/* clock */0];
-                              var cpu_001 = /* registers : record */[
-                                /* a */init[/* a */0],
-                                /* b */init[/* b */1],
-                                /* c */255,
-                                /* d */init[/* d */3],
-                                /* e */init[/* e */4],
-                                /* h */init[/* h */5],
-                                /* l */init[/* l */6],
-                                /* f */init[/* f */7],
-                                /* sp */init[/* sp */8],
-                                /* pc */init[/* pc */9],
-                                /* mCycles */init[/* mCycles */10]
-                              ];
-                              var cpu = /* record */[
-                                cpu_000,
-                                cpu_001
-                              ];
+                Jest.test("INC BC", (function () {
+                        var eta = Cpu$GameboyEmulator.make(/* () */0);
+                        var cpu = Curry._5((function (param, param$1) {
+                                  return Curry._3(Cpu$GameboyEmulator.setRegisters, param, param$1, 255);
+                                })(undefined, undefined), undefined, undefined, undefined, undefined, eta);
+                        var mmu = Mmu$GameboyEmulator.load(Caml_array.caml_make_vect(4096, 0));
+                        var gpu = Gpu$GameboyEmulator.make(/* () */0);
+                        var match = Cpu$GameboyEmulator.Ops[/* inc_bc */3](/* record */[
+                              /* cpu */cpu,
+                              /* mmu */mmu,
+                              /* gpu */gpu
+                            ]);
+                        var cpu1 = match[0];
+                        return Jest.Expect[/* toEqual */12](/* tuple */[
+                                    256,
+                                    1,
+                                    0
+                                  ], Jest.Expect[/* expect */0](/* tuple */[
+                                        Cpu$GameboyEmulator.rBc(cpu1),
+                                        cpu1[/* registers */1][/* b */1],
+                                        cpu1[/* registers */1][/* c */2]
+                                      ]));
+                      }));
+                return Jest.testAll("RLCA", /* :: */[
+                            /* tuple */[
+                              136,
+                              17,
+                              16
+                            ],
+                            /* :: */[
+                              /* tuple */[
+                                255,
+                                255,
+                                16
+                              ],
+                              /* :: */[
+                                /* tuple */[
+                                  1,
+                                  2,
+                                  0
+                                ],
+                                /* [] */0
+                              ]
+                            ]
+                          ], (function (param) {
+                              var partial_arg = param[0];
+                              var cpu = (function (eta) {
+                                    var param = undefined;
+                                    var param$1 = undefined;
+                                    var param$2 = undefined;
+                                    var param$3 = undefined;
+                                    var param$4 = undefined;
+                                    var param$5 = undefined;
+                                    var param$6 = eta;
+                                    return Cpu$GameboyEmulator.setRegisters(partial_arg, param, param$1, param$2, param$3, param$4, param$5, param$6);
+                                  })(Cpu$GameboyEmulator.make(/* () */0));
                               var mmu = Mmu$GameboyEmulator.load(Caml_array.caml_make_vect(4096, 0));
                               var gpu = Gpu$GameboyEmulator.make(/* () */0);
-                              var match = Cpu$GameboyEmulator.Ops[/* inc_bc */3](cpu, mmu, gpu);
+                              var match = Cpu$GameboyEmulator.Ops[/* rlca */7](/* record */[
+                                    /* cpu */cpu,
+                                    /* mmu */mmu,
+                                    /* gpu */gpu
+                                  ]);
                               var cpu1 = match[0];
                               return Jest.Expect[/* toEqual */12](/* tuple */[
-                                          256,
-                                          1,
-                                          0
+                                          param[1],
+                                          param[2]
                                         ], Jest.Expect[/* expect */0](/* tuple */[
-                                              Cpu$GameboyEmulator.rBc(cpu1),
-                                              cpu1[/* registers */1][/* b */1],
-                                              cpu1[/* registers */1][/* c */2]
+                                              cpu1[/* registers */1][/* a */0],
+                                              Cpu$GameboyEmulator.getFlag(/* C */3, cpu1)
                                             ]));
                             }));
               }));
