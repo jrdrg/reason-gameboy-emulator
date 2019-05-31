@@ -267,7 +267,7 @@ var bios = /* array */[
 
 function load(bytes) {
   return /* record */[
-          /* finishedBios */true,
+          /* finishedBios */false,
           /* cartType */Caml_array.caml_array_get(bytes, 327),
           /* rom */bytes,
           /* externalRam : array */[],
@@ -287,7 +287,8 @@ function reset(mmu) {
         ];
 }
 
-function read8(addr, mmu) {
+function read8(addr, param) {
+  var mmu = param[/* mmu */1];
   console.log(Curry._1(Printf.sprintf(/* Format */[
                 /* String_literal */Block.__(11, [
                     "Reading byte ",
@@ -348,26 +349,9 @@ function read8(addr, mmu) {
       } else {
         exit = 3;
       }
-    } else if (match >= 36865) {
-      if (match !== 40960 && match < 45056) {
-        return /* tuple */[
-                0,
-                mmu
-              ];
-      } else {
-        return /* tuple */[
-                -1,
-                mmu
-              ];
-      }
-    } else if (match !== 32768 && match < 36864) {
-      return /* tuple */[
-              0,
-              mmu
-            ];
     } else {
       return /* tuple */[
-              -1,
+              0,
               mmu
             ];
     }
@@ -422,8 +406,9 @@ function read8(addr, mmu) {
               mmu
             ];
     } else if (match$4) {
+      console.log("Loaded BIOS");
       return /* tuple */[
-              Caml_array.caml_array_get(bios, addr),
+              Caml_array.caml_array_get(mmu[/* rom */2], addr),
               /* record */[
                 /* finishedBios */true,
                 /* cartType */mmu[/* cartType */1],
@@ -456,7 +441,7 @@ function read8(addr, mmu) {
   }
 }
 
-function read16(addr, mmu) {
+function read16(addr, state) {
   console.log(Curry._1(Printf.sprintf(/* Format */[
                 /* String_literal */Block.__(11, [
                     "Reading word ",
@@ -469,8 +454,11 @@ function read16(addr, mmu) {
                   ]),
                 "Reading word %x"
               ]), addr));
-  var match = read8(addr, mmu);
-  var match$1 = read8(addr + 1 | 0, match[1]);
+  var match = read8(addr, state);
+  var match$1 = read8(addr + 1 | 0, /* record */[
+        /* gpu */state[/* gpu */0],
+        /* mmu */match[1]
+      ]);
   var c = (match$1[0] << 8);
   return /* tuple */[
           match[0] + c | 0,
@@ -478,7 +466,9 @@ function read16(addr, mmu) {
         ];
 }
 
-function write8(addr, v, mmu, gpu) {
+function write8(addr, v, param) {
+  var mmu = param[/* mmu */1];
+  var gpu = param[/* gpu */0];
   console.log(Curry._2(Printf.sprintf(/* Format */[
                 /* String_literal */Block.__(11, [
                     "Writing ",
@@ -510,7 +500,7 @@ function write8(addr, v, mmu, gpu) {
           ];
   }
   if (exit === 1) {
-    Caml_array.caml_array_set(gpu[/* vram */5], addr & 8191, v);
+    Caml_array.caml_array_set(gpu[/* vram */3], addr & 8191, v);
     return /* tuple */[
             mmu,
             gpu

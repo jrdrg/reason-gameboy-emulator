@@ -175,6 +175,11 @@ function decrementSp(t) {
         ];
 }
 
+function getFlag(flag, cpu) {
+  var bit = (1 << flagOffset(flag));
+  return cpu[/* registers */1][/* f */7] & bit;
+}
+
 function setFlag$1(flag, value, initialValue, cpu) {
   var init = cpu[/* registers */1];
   return /* record */[
@@ -193,11 +198,6 @@ function setFlag$1(flag, value, initialValue, cpu) {
             /* mCycles */init[/* mCycles */10]
           ]
         ];
-}
-
-function getFlag(flag, cpu) {
-  var bit = (1 << flagOffset(flag));
-  return cpu[/* registers */1][/* f */7] & bit;
 }
 
 function setRegisters(a, b, c, d, e, h, l, cpu) {
@@ -240,17 +240,25 @@ function machineCycles(cycles, cpu) {
         ];
 }
 
-function nop(cpu, mmu, _) {
+function nop(param) {
   return /* tuple */[
-          machineCycles(1, cpu),
-          mmu
+          machineCycles(1, param[/* cpu */0]),
+          param[/* mmu */1]
         ];
 }
 
-function ld_bc_nn(cpu, mmu, _) {
+function ld_bc_nn(param) {
+  var gpu = param[/* gpu */2];
+  var cpu = param[/* cpu */0];
   var pc = cpu[/* registers */1][/* pc */9];
-  var match = Mmu$GameboyEmulator.read8(pc, mmu);
-  var match$1 = Mmu$GameboyEmulator.read8(pc + 1 | 0, match[1]);
+  var match = Mmu$GameboyEmulator.read8(pc, /* record */[
+        /* gpu */gpu,
+        /* mmu */param[/* mmu */1]
+      ]);
+  var match$1 = Mmu$GameboyEmulator.read8(pc + 1 | 0, /* record */[
+        /* gpu */gpu,
+        /* mmu */match[1]
+      ]);
   var arg = match$1[0];
   var arg$1 = match[0];
   return /* tuple */[
@@ -263,16 +271,21 @@ function ld_bc_nn(cpu, mmu, _) {
         ];
 }
 
-function ld_m_bc_a(cpu, mmu, gpu) {
+function ld_m_bc_a(param) {
+  var cpu = param[/* cpu */0];
   var match = cpu[/* registers */1];
-  var match$1 = Mmu$GameboyEmulator.write8(rBc(cpu), match[/* a */0], mmu, gpu);
+  var match$1 = Mmu$GameboyEmulator.write8(rBc(cpu), match[/* a */0], /* record */[
+        /* gpu */param[/* gpu */2],
+        /* mmu */param[/* mmu */1]
+      ]);
   return /* tuple */[
           machineCycles(2, cpu),
           match$1[0]
         ];
 }
 
-function inc_bc(cpu, mmu, _) {
+function inc_bc(param) {
+  var cpu = param[/* cpu */0];
   var c = cpu[/* registers */1][/* c */2] + 1 & 255;
   var b = c === 0 ? cpu[/* registers */1][/* b */1] + 1 | 0 : cpu[/* registers */1][/* b */1];
   var arg = b;
@@ -283,11 +296,12 @@ function inc_bc(cpu, mmu, _) {
                           return setRegisters(param, arg, arg$1, param$1, param$2, param$3, param$4, param$5);
                         });
                     })(undefined)(undefined, undefined, undefined, undefined, cpu)),
-          mmu
+          param[/* mmu */1]
         ];
 }
 
-function inc_b(cpu, mmu, _) {
+function inc_b(param) {
+  var cpu = param[/* cpu */0];
   var b = cpu[/* registers */1][/* b */1] + 1 & 255;
   var f = cpu[/* registers */1][/* f */7] & 16;
   var arg = b;
@@ -297,11 +311,12 @@ function inc_b(cpu, mmu, _) {
                               return setRegisters(param, arg, param$1, param$2, param$3, param$4, param$5, param$6);
                             });
                         })(undefined)(undefined, undefined, undefined, undefined, undefined, cpu))),
-          mmu
+          param[/* mmu */1]
         ];
 }
 
-function dec_b(cpu, mmu, _) {
+function dec_b(param) {
+  var cpu = param[/* cpu */0];
   var b = cpu[/* registers */1][/* b */1] - 1 & 255;
   var f = cpu[/* registers */1][/* f */7] & 16;
   var arg = b;
@@ -315,13 +330,17 @@ function dec_b(cpu, mmu, _) {
                                   return setRegisters(param, arg, param$1, param$2, param$3, param$4, param$5, param$6);
                                 });
                             })(undefined)(undefined, undefined, undefined, undefined, undefined, cpu)))),
-          mmu
+          param[/* mmu */1]
         ];
 }
 
-function ld_b_n(cpu, mmu, _) {
+function ld_b_n(param) {
+  var cpu = param[/* cpu */0];
   var pc = cpu[/* registers */1][/* pc */9];
-  var match = Mmu$GameboyEmulator.read8(pc, mmu);
+  var match = Mmu$GameboyEmulator.read8(pc, /* record */[
+        /* gpu */param[/* gpu */2],
+        /* mmu */param[/* mmu */1]
+      ]);
   var arg = match[0];
   return /* tuple */[
           incrementPc(1, machineCycles(2, (function (param) {
@@ -333,6 +352,57 @@ function ld_b_n(cpu, mmu, _) {
         ];
 }
 
+function rlca(param) {
+  var cpu = param[/* cpu */0];
+  var match = cpu[/* registers */1];
+  var a = match[/* a */0];
+  var match$1 = (a & 128) > 0;
+  var highBit = match$1 ? 1 : 0;
+  var a$prime = (a << 1) + highBit & 255;
+  var partial_arg = a$prime;
+  return /* tuple */[
+          (function (eta) {
+                var param = undefined;
+                var param$1 = eta;
+                return setFlag$1(/* C */3, highBit, param, param$1);
+              })((function (eta) {
+                    var param = undefined;
+                    var param$1 = undefined;
+                    var param$2 = undefined;
+                    var param$3 = undefined;
+                    var param$4 = undefined;
+                    var param$5 = undefined;
+                    var param$6 = eta;
+                    return setRegisters(partial_arg, param, param$1, param$2, param$3, param$4, param$5, param$6);
+                  })(machineCycles(1, cpu))),
+          param[/* mmu */1]
+        ];
+}
+
+function rla(param) {
+  console.log("RLA");
+  return /* tuple */[
+          machineCycles(1, param[/* cpu */0]),
+          param[/* mmu */1]
+        ];
+}
+
+function rrca(param) {
+  console.log("RRCA");
+  return /* tuple */[
+          machineCycles(1, param[/* cpu */0]),
+          param[/* mmu */1]
+        ];
+}
+
+function rra(param) {
+  console.log("RRA");
+  return /* tuple */[
+          machineCycles(1, param[/* cpu */0]),
+          param[/* mmu */1]
+        ];
+}
+
 var Ops = /* module */[
   /* nop */nop,
   /* ld_bc_nn */ld_bc_nn,
@@ -340,12 +410,16 @@ var Ops = /* module */[
   /* inc_bc */inc_bc,
   /* inc_b */inc_b,
   /* dec_b */dec_b,
-  /* ld_b_n */ld_b_n
+  /* ld_b_n */ld_b_n,
+  /* rlca */rlca,
+  /* rla */rla,
+  /* rrca */rrca,
+  /* rra */rra
 ];
 
 function exec(instruction) {
   var exit = 0;
-  if (instruction >= 7) {
+  if (instruction >= 8) {
     if (instruction >= 256) {
       exit = 1;
     } else {
@@ -367,6 +441,8 @@ function exec(instruction) {
           return dec_b;
       case 6 : 
           return ld_b_n;
+      case 7 : 
+          return rlca;
       
     }
   } else {
@@ -408,8 +484,8 @@ exports.rHl = rHl;
 exports.incrementPc = incrementPc;
 exports.incrementSp = incrementSp;
 exports.decrementSp = decrementSp;
-exports.setFlag = setFlag$1;
 exports.getFlag = getFlag;
+exports.setFlag = setFlag$1;
 exports.setRegisters = setRegisters;
 exports.machineCycles = machineCycles;
 exports.Ops = Ops;

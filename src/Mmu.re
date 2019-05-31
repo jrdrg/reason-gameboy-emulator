@@ -267,8 +267,13 @@ type t = {
   zeroPageRam: array(int),
 };
 
+type state = {
+  gpu: Gpu.t,
+  mmu: t,
+};
+
 let load = bytes => {
-  finishedBios: true,
+  finishedBios: false,
   cartType: bytes[0x147], /* from docs - http://gameboy.mongenel.com/dmg/asmmemmap.html */
   rom: bytes,
   externalRam: [||],
@@ -284,14 +289,16 @@ let reset = mmu => {
   zeroPageRam: Array.make(128, 0),
 };
 
-let read8 = (addr, mmu) => {
+let read8 = (addr, {mmu}: state) => {
   Js.log(Printf.sprintf("Reading byte %x", addr));
   /* switch on the first byte */
   switch (addr land 0xf000) {
   | 0x0000 =>
     switch (mmu.finishedBios, addr <= 0xff, addr === 0x100) {
     | (false, true, _) => (bios[addr], mmu)
-    | (false, _, true) => (bios[addr], {...mmu, finishedBios: true})
+    | (false, _, true) =>
+      Js.log("Loaded BIOS");
+      (mmu.rom[addr], {...mmu, finishedBios: true});
     | (true, _, _) => (mmu.rom[addr], mmu)
     | _ => (mmu.rom[addr], mmu)
     }
@@ -303,9 +310,9 @@ let read8 = (addr, mmu) => {
   | 0x6000
   | 0x7000 => (mmu.rom[addr], mmu) /* ROM bank from cartridge */
   | 0x8000
-  | 0x9000 => ((-1), mmu) /* Video RAM */
+  | 0x9000 => (0, mmu) /* Video RAM */
   | 0xA000
-  | 0xB000 => ((-1), mmu) /* External RAM */
+  | 0xB000 => (0, mmu) /* External RAM */
   /*
     Work RAM
     This removes the first nibble of the address
@@ -335,15 +342,15 @@ let read8 = (addr, mmu) => {
      0x34, 0x12
      0x34 + (0x12 << 8) = 0x1234
  */
-let read16 = (addr, mmu) => {
+let read16 = (addr, {gpu} as state: state) => {
   Js.log(Printf.sprintf("Reading word %x", addr));
-  let (a, mmu) = read8(addr, mmu);
-  let (b, mmu) = read8(addr + 1, mmu);
+  let (a, mmu) = read8(addr, state);
+  let (b, mmu) = read8(addr + 1, {gpu, mmu});
   let c = b lsl 8;
   (a + c, mmu);
 };
 
-let write8 = (addr, v, mmu, gpu: Gpu.t) => {
+let write8 = (addr, v, {gpu, mmu}: state) => {
   /* let {mmu, gpu} = state; */
   Js.log(Printf.sprintf("Writing %x to %x", addr, v));
   switch (addr land 0xf000) {
