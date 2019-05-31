@@ -5,6 +5,7 @@ var Curry = require("bs-platform/lib/js/curry.js");
 var Cpu$GameboyEmulator = require("./Cpu.bs.js");
 var Gpu$GameboyEmulator = require("./Gpu.bs.js");
 var Mmu$GameboyEmulator = require("./Mmu.bs.js");
+var Renderer$GameboyEmulator = require("./Renderer.bs.js");
 
 function load(bytes) {
   console.log("Loaded, ROM length: ", bytes.length);
@@ -12,6 +13,7 @@ function load(bytes) {
   return /* record */[
           /* frameCount */0,
           /* fps */0,
+          /* renderer */Renderer$GameboyEmulator.make(/* () */0),
           /* gpu */Gpu$GameboyEmulator.make(/* () */0),
           /* cpu */Cpu$GameboyEmulator.make(/* () */0),
           /* mmu */mmu
@@ -22,22 +24,31 @@ function reset(state) {
   return /* record */[
           /* frameCount */state[/* frameCount */0] + 1 | 0,
           /* fps */0,
+          /* renderer */state[/* renderer */2],
           /* gpu */Gpu$GameboyEmulator.make(/* () */0),
-          /* cpu */state[/* cpu */3],
-          /* mmu */Mmu$GameboyEmulator.reset(state[/* mmu */4])
+          /* cpu */state[/* cpu */4],
+          /* mmu */Mmu$GameboyEmulator.reset(state[/* mmu */5])
         ];
 }
 
 function frame(s) {
-  var programCount = Cpu$GameboyEmulator.programCount(s[/* cpu */3]);
-  var match = Mmu$GameboyEmulator.read8(programCount, s[/* mmu */4]);
-  var match$1 = Curry._3(Cpu$GameboyEmulator.exec(match[0]), s[/* cpu */3], match[1], s[/* gpu */2]);
+  var programCount = Cpu$GameboyEmulator.programCount(s[/* cpu */4]);
+  var match = Mmu$GameboyEmulator.read8(programCount, /* record */[
+        /* gpu */s[/* gpu */3],
+        /* mmu */s[/* mmu */5]
+      ]);
+  var match$1 = Curry._1(Cpu$GameboyEmulator.exec(match[0]), /* record */[
+        /* cpu */s[/* cpu */4],
+        /* mmu */match[1],
+        /* gpu */s[/* gpu */3]
+      ]);
   var cpu = match$1[0];
-  var gpu = Gpu$GameboyEmulator.step(cpu[/* registers */1][/* mCycles */10], s[/* gpu */2]);
+  var gpu = Gpu$GameboyEmulator.step(cpu[/* registers */1][/* mCycles */10], s[/* renderer */2], s[/* gpu */3]);
   var init = cpu[/* registers */1];
   return /* record */[
           /* frameCount */s[/* frameCount */0],
           /* fps */s[/* fps */1],
+          /* renderer */s[/* renderer */2],
           /* gpu */gpu,
           /* cpu : record */[
             /* clock */cpu[/* clock */0] + cpu[/* registers */1][/* mCycles */10] | 0,

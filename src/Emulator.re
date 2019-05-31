@@ -2,6 +2,7 @@
 type state = {
   frameCount: int,
   fps: int,
+  renderer: Renderer.t,
   gpu: Gpu.t,
   cpu: Cpu.t,
   mmu: Mmu.t,
@@ -10,7 +11,14 @@ type state = {
 let load = bytes => {
   Js.log2("Loaded, ROM length: ", Array.length(bytes));
   let mmu = Mmu.load(bytes);
-  {fps: 0, frameCount: 0, gpu: Gpu.make(), cpu: Cpu.make(), mmu};
+  {
+    fps: 0,
+    frameCount: 0,
+    renderer: Renderer.make(),
+    gpu: Gpu.make(),
+    cpu: Cpu.make(),
+    mmu,
+  };
 };
 
 let reset = state => {
@@ -24,11 +32,12 @@ let reset = state => {
 let frame = (s: state) => {
   /* increment program counter by 1 */
   let programCount = Cpu.programCount(s.cpu);
-  let (instruction, mmu) = s.mmu |> Mmu.read8(programCount);
-  let (cpu, mmu) = Cpu.exec(instruction, s.cpu, mmu, s.gpu);
+  let (instruction, mmu) =
+    Mmu.read8(programCount, {gpu: s.gpu, mmu: s.mmu});
+  let (cpu, mmu) = Cpu.exec(instruction, {mmu, gpu: s.gpu, cpu: s.cpu});
   /* GPU draw */
-  let gpu = Gpu.step(cpu.registers.mCycles, s.gpu);
-  /* update timer */
+  let gpu = s.gpu |> Gpu.step(cpu.registers.mCycles, s.renderer);
+  /* update timer and PC */
   let nextState = {
     ...s,
     mmu,
