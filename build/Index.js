@@ -77,7 +77,7 @@
 /******/ 	__webpack_require__.o = function(object, property) { return Object.prototype.hasOwnProperty.call(object, property); };
 /******/
 /******/ 	// __webpack_public_path__
-/******/ 	__webpack_require__.p = "/Users/john/programmingstuff/reason/reason-gameboy-emulator/build/";
+/******/ 	__webpack_require__.p = "/Users/john/projects/reason/reason-gameboy-emulator/build/";
 /******/
 /******/
 /******/ 	// Load entry module and return exports

@@ -48,5 +48,36 @@ describe("Cpu", () => {
         |> toEqual((expected, carry));
       },
     );
+    describe("INC B", () => {
+      test("increments register b", () => {
+        let c = Cpu.make();
+        let cpu = {
+          ...c,
+          registers: {
+            ...c.registers,
+            b: 9,
+          },
+        };
+        let mmu = Mmu.load(Array.make(4096, 0));
+        let gpu = Gpu.make();
+        let (cpu1, _) = Cpu.Ops.inc_b({cpu, mmu, gpu});
+        expect(cpu1.registers.b) |> toEqual(0x0a);
+      });
+      test("updates the carry flag", () => {
+        let c = Cpu.make();
+        let cpu = {
+          ...c,
+          registers: {
+            ...c.registers,
+            b: 255,
+          },
+        };
+        let mmu = Mmu.load(Array.make(4096, 0));
+        let gpu = Gpu.make();
+        let (cpu1, _) = Cpu.Ops.inc_b({cpu, mmu, gpu});
+        expect((cpu1.registers.b, cpu1.registers.f))
+        |> toEqual((0x0, 0x0 lor 0x1 lsl 7));
+      });
+    });
   });
 });

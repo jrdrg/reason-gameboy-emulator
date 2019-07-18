@@ -169,6 +169,7 @@ module Ops = {
   };
   type op = state => (t, Mmu.t);
   let nop: op = ({mmu, cpu}) => (machineCycles(1, cpu), mmu);
+  /* 01 */
   let ld_bc_nn: op =
     ({mmu, gpu, cpu}) => {
       let pc = programCount(cpu);
@@ -179,12 +180,14 @@ module Ops = {
         m,
       );
     };
+  /* 02 */
   let ld_m_bc_a: op =
     ({mmu, gpu, cpu}) => {
       let {a} = cpu.registers;
       let (mmuWrite, _gpu) = Mmu.write8(rBc(cpu), a, {mmu, gpu});
       (cpu |> machineCycles(2), mmuWrite);
     };
+  /* 03 */
   let inc_bc: op =
     ({mmu, cpu}) => {
       let c = (cpu.registers.c + 1) land 0xff; /* wrap after 255, i.e. 256 = 0 */
@@ -196,6 +199,7 @@ module Ops = {
         };
       (cpu |> setRegisters(~b, ~c) |> machineCycles(2), mmu);
     };
+  /* 04 */
   let inc_b: op =
     ({mmu, cpu}) => {
       let b = (cpu.registers.b + 1) land 0xff;
@@ -209,6 +213,7 @@ module Ops = {
         mmu,
       );
     };
+  /* 05 */
   let dec_b: op =
     ({mmu, cpu}) => {
       let b = (cpu.registers.b - 1) land 0xff;
@@ -222,12 +227,14 @@ module Ops = {
         mmu,
       );
     };
+  /* 06 */
   let ld_b_n: op =
     ({mmu, gpu, cpu}) => {
       let pc = programCount(cpu);
       let (b, m) = Mmu.read8(pc, {gpu, mmu});
       (cpu |> setRegisters(~b) |> machineCycles(2) |> incrementPc(1), m);
     };
+  /* 07 */
   let rlca: op =
     ({mmu, cpu}) => {
       let {a} = cpu.registers;
@@ -246,6 +253,7 @@ module Ops = {
       Js.log("RLA");
       (cpu |> machineCycles(1), mmu);
     };
+
   let rrca: op =
     ({mmu, cpu}) => {
       Js.log("RRCA");
