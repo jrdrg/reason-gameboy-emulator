@@ -272,15 +272,6 @@ type state = {
   mmu: t,
 };
 
-let load = bytes => {
-  finishedBios: false,
-  cartType: bytes[0x147], /* from docs - http://gameboy.mongenel.com/dmg/asmmemmap.html */
-  rom: bytes,
-  externalRam: [||],
-  workRam: [||],
-  zeroPageRam: [||],
-};
-
 let reset = mmu => {
   ...mmu,
   finishedBios: false,
@@ -289,8 +280,20 @@ let reset = mmu => {
   zeroPageRam: Array.make(128, 0),
 };
 
-let read8 = (addr, {mmu}: state) => {
-  Js.log(Printf.sprintf("Reading byte %x", addr));
+let load = bytes => {
+  let mmu = {
+    finishedBios: false,
+    cartType: bytes[0x147], /* from docs - http://gameboy.mongenel.com/dmg/asmmemmap.html */
+    rom: bytes,
+    externalRam: [||],
+    workRam: [||],
+    zeroPageRam: [||],
+  };
+  reset(mmu);
+};
+
+let read8 = (addr, {mmu}: state) =>
+  /* Js.log(Printf.sprintf("Reading byte %x", addr)); */
   /* switch on the first byte */
   switch (addr land 0xf000) {
   | 0x0000 =>
@@ -334,7 +337,6 @@ let read8 = (addr, {mmu}: state) => {
     }
   | _ => (0, mmu)
   };
-};
 
 /*
      Read one byte then the next byte left shifted by 8 bits
@@ -352,7 +354,7 @@ let read16 = (addr, {gpu} as state: state) => {
 
 let write8 = (addr, v, {gpu, mmu}: state) => {
   /* let {mmu, gpu} = state; */
-  Js.log(Printf.sprintf("Writing %x to %x", addr, v));
+  Js.log(Printf.sprintf("Writing %x to addr %x", v, addr));
   switch (addr land 0xf000) {
   /* | 0x0000 | 0x1000  => */
   | 0x6000
@@ -363,6 +365,7 @@ let write8 = (addr, v, {gpu, mmu}: state) => {
   | 0x8000
   | 0x9000 =>
     gpu.vram[addr land 0x1fff] = v;
+    gpu |> Gpu.updateTile(addr);
     (mmu, gpu);
   | _ => (mmu, gpu)
   };

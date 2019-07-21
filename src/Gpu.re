@@ -7,6 +7,9 @@ type t = {
   tileset: array(array(array(int))),
 };
 
+/**
+ * 384 8x8 tiles
+ */
 let initTileset = () => Array.make(384, Array.make(8, Array.make(8, 0)));
 
 let make = () => {
@@ -27,12 +30,46 @@ let reset = () => {
   tileset: initTileset(),
 };
 
+/**
+ * Gets a value written to the VRAM and updates the GPU tileset
+ */
+let updateTile = (addr: int, gpu: t) => {
+  /*
+   http://imrannazar.com/GameBoy-Emulation-in-JavaScript:-Graphics
+
+   Region	    Usage
+   8000-87FF	Tile set #1: tiles 0-127
+   8800-8FFF	Tile set #1: tiles 128-255
+              Tile set #0: tiles -1 to -128
+   9000-97FF	Tile set #0: tiles 0-127
+   9800-9BFF	Tile map #0
+   9C00-9FFF	Tile map #1
+   */
+  /* vram is 8192 bytes */
+  let addr = addr land 0x1ffe; /* 8190 */
+  /* 511 = 0b111111111 */
+  let tile = addr lsr 4 land 511; /* 0x1ffe >> 4 = 511: Remove last 4 bits then get last 9 bits */
+  let y = addr lsr 1 land 7; /* Remove the last bit then get the last 3 bits of the result */
+  Belt.Range.forEach(
+    0,
+    7,
+    x => {
+      Js.log(x);
+      /* Get bit index for this pixel */
+      let sx = 1 lsl (7 - x);
+      let b1 = gpu.vram[addr] land sx > 0 ? 1 : 0;
+      let b2 = gpu.vram[addr + 1] land sx > 0 ? 2 : 0;
+      gpu.tileset[tile][y][x] = b1 + b2;
+      ();
+    },
+  );
+  ();
+};
+
 let step = (mCycles: int, renderer: Renderer.t, gpu: t) => {
   let modeclock = gpu.clock + mCycles;
   let gpu = {...gpu, clock: modeclock};
   /*
-
-
    scanline (oam): mode 2, 20 machine cycles
    scanline (vram): mode 3, 43 machine cycles
    hblank: mode 0, 51 machine cycles
@@ -48,6 +85,7 @@ let step = (mCycles: int, renderer: Renderer.t, gpu: t) => {
       let line = gpu.line + 1;
       if (line == 143) {
         /* enter vblank */
+        Js.log("Render to screen");
         {...gpu, clock, line, mode: 1} |> Renderer.renderToScreen(renderer);
       } else {
         {...gpu, clock, line, mode: 2};
