@@ -1,11 +1,11 @@
 /* http://marc.rawer.de/Gameboy/Docs/GBCPUman.pdf */
 type state = {
-  frameCount: int,
-  fps: int,
+  mutable frameCount: int,
+  mutable fps: int,
+  mutable gpu: Gpu.t,
+  mutable cpu: Cpu.t,
+  mutable mmu: Mmu.t,
   renderer: Renderer.t,
-  gpu: Gpu.t,
-  cpu: Cpu.t,
-  mmu: Mmu.t,
 };
 
 let load = bytes => {
@@ -30,26 +30,20 @@ let reset = state => {
 };
 
 let frame = (s: state) => {
-  /* increment program counter by 1 */
   let programCount = Cpu.programCount(s.cpu);
   let (instruction, mmu) =
     Mmu.read8(programCount, {gpu: s.gpu, mmu: s.mmu});
-  let (cpu, mmu) = Cpu.exec(instruction, {mmu, gpu: s.gpu, cpu: s.cpu});
+  /* execute next instruction */
+  let {cpu, mmu}: Cpu.Ops.state =
+    Cpu.exec(instruction, {mmu, gpu: s.gpu, cpu: s.cpu});
   /* GPU draw */
   let gpu = s.gpu |> Gpu.step(cpu.registers.mCycles, s.renderer);
-  /* update timer and PC */
-  let nextState = {
-    ...s,
-    mmu,
-    gpu,
-    cpu: {
-      registers: {
-        ...cpu.registers,
-        /* wrap around pc if it's more than 2 bytes */
-        pc: (Cpu.programCount(cpu) + 1) land 0xffff,
-      },
-      clock: cpu.clock + cpu.registers.mCycles,
-    },
-  };
-  nextState;
+  s.gpu = gpu;
+  s.mmu = mmu;
+  s.cpu = cpu;
+  /* update timer  */
+  s.cpu.clock = s.cpu.clock + cpu.registers.mCycles;
+  /* increment PC and wrap around pc if it's more than 2 bytes */
+  s.cpu.registers.pc = (Cpu.programCount(cpu) + 1) land 0xffff;
+  s;
 };

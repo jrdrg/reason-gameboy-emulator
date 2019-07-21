@@ -28,7 +28,7 @@ describe("Cpu", () => {
       let cpu = Cpu.make() |> Cpu.setRegisters(~c=255);
       let mmu = Mmu.load(Array.make(4096, 0));
       let gpu = Gpu.make();
-      let (cpu1, _) = Cpu.Ops.inc_bc({mmu, gpu, cpu});
+      let cpu1 = Cpu.Ops.inc_bc({mmu, gpu, cpu}).cpu;
       expect((Cpu.rBc(cpu1), cpu1.registers.b, cpu1.registers.c))
       |> toEqual((256, 0x1, 0x0));
     });
@@ -43,7 +43,7 @@ describe("Cpu", () => {
         let cpu = Cpu.make() |> Cpu.setRegisters(~a=input);
         let mmu = Mmu.load(Array.make(4096, 0));
         let gpu = Gpu.make();
-        let (cpu1, _) = Cpu.Ops.rlca({cpu, mmu, gpu});
+        let cpu1 = Cpu.Ops.rlca({cpu, mmu, gpu}).cpu;
         expect((cpu1.registers.a, Cpu.getFlag(Cpu.Flags.C, cpu1)))
         |> toEqual((expected, carry));
       },
@@ -60,7 +60,7 @@ describe("Cpu", () => {
         };
         let mmu = Mmu.load(Array.make(4096, 0));
         let gpu = Gpu.make();
-        let (cpu1, _) = Cpu.Ops.inc_b({cpu, mmu, gpu});
+        let cpu1 = Cpu.Ops.inc_b({cpu, mmu, gpu}).cpu;
         expect(cpu1.registers.b) |> toEqual(0x0a);
       });
       test("updates the carry flag", () => {
@@ -74,7 +74,7 @@ describe("Cpu", () => {
         };
         let mmu = Mmu.load(Array.make(4096, 0));
         let gpu = Gpu.make();
-        let (cpu1, _) = Cpu.Ops.inc_b({cpu, mmu, gpu});
+        let cpu1 = Cpu.Ops.inc_b({cpu, mmu, gpu}).cpu;
         expect((cpu1.registers.b, cpu1.registers.f))
         |> toEqual((0x0, 0x0 lor 0x1 lsl 7));
       });

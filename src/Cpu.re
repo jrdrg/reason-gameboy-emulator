@@ -1,10 +1,7 @@
 /* http://gameboy.mongenel.com/dmg/opcodes.html */
 /* http://marc.rawer.de/Gameboy/Docs/GBCPUman.pdf */
 module Flags = {
-  let z = 7;
-  let n = 6;
-  let h = 5;
-  let c = 4;
+  let (z, n, h, c) = (7, 6, 5, 4);
   type flag =
     | Z
     | N
@@ -43,21 +40,21 @@ type register16 =
   | HL;
 
 type registers = {
-  a: int,
-  b: int,
-  c: int,
-  d: int,
-  e: int,
-  h: int,
-  l: int,
-  f: int,
-  sp: int,
-  pc: int,
-  mCycles: int,
+  mutable a: int,
+  mutable b: int,
+  mutable c: int,
+  mutable d: int,
+  mutable e: int,
+  mutable h: int,
+  mutable l: int,
+  mutable f: int,
+  mutable sp: int,
+  mutable pc: int,
+  mutable mCycles: int,
 };
 
 type t = {
-  clock: int,
+  mutable clock: int,
   registers,
 };
 
@@ -106,17 +103,23 @@ let rDe = readRegister16(DE);
 
 let rHl = readRegister16(HL);
 
+/**
+ * Increment Program Counter
+ */
 let incrementPc = (cycles, cpu) => {
-  ...cpu,
-  registers: {
-    ...cpu.registers,
-    pc: cpu.registers.pc + cycles,
-  },
+  cpu.registers.pc = cpu.registers.pc + cycles;
+  cpu;
 };
 
-let incrementSp = t => {...t, sp: t.sp + 1};
+let incrementSp = (t: registers) => {
+  t.sp = t.sp + 1;
+  t;
+};
 
-let decrementSp = t => {...t, sp: t.sp - 1};
+let decrementSp = (t: registers) => {
+  t.sp = t.sp - 1;
+  t;
+};
 
 /**
  * Returns a byte with only the appropriate flag value set (or not)
@@ -127,39 +130,37 @@ let getFlag = (flag, cpu) => {
 };
 
 let setFlag = (flag, value, ~initialValue=?, cpu) => {
-  ...cpu,
-  registers: {
-    ...cpu.registers,
-    f:
-      Flags.setFlag(
-        flag,
-        value,
-        Belt.Option.getWithDefault(initialValue, cpu.registers.f),
-      ),
-  },
+  open Belt;
+  cpu.registers.f =
+    Flags.setFlag(
+      flag,
+      value,
+      Option.getWithDefault(initialValue, cpu.registers.f),
+    );
+  cpu;
 };
 
 let setRegisters = (~a=?, ~b=?, ~c=?, ~d=?, ~e=?, ~h=?, ~l=?, cpu) => {
-  ...cpu,
-  registers: {
-    ...cpu.registers,
-    a: Belt.Option.getWithDefault(a, cpu.registers.a),
-    b: Belt.Option.getWithDefault(b, cpu.registers.b),
-    c: Belt.Option.getWithDefault(c, cpu.registers.c),
-    d: Belt.Option.getWithDefault(d, cpu.registers.d),
-    e: Belt.Option.getWithDefault(e, cpu.registers.e),
-    h: Belt.Option.getWithDefault(h, cpu.registers.h),
-    l: Belt.Option.getWithDefault(l, cpu.registers.l),
-  },
+  open Belt;
+  let {registers} = cpu;
+  registers.a = Option.getWithDefault(a, registers.a);
+  registers.b = Option.getWithDefault(b, registers.b);
+  registers.c = Option.getWithDefault(c, registers.c);
+  registers.d = Option.getWithDefault(d, registers.d);
+  registers.e = Option.getWithDefault(e, registers.e);
+  registers.h = Option.getWithDefault(h, registers.h);
+  registers.l = Option.getWithDefault(l, registers.l);
+  cpu;
 };
 
-let machineCycles = (cycles, cpu) => {
-  ...cpu,
-  registers: {
-    ...cpu.registers,
-    mCycles: cycles,
-  },
+let machineCycles = (cycles: int, cpu: t) => {
+  cpu.registers.mCycles = cycles;
+  cpu;
 };
+
+let cycles = (cycles: int, cpu: t) =>
+  /* 1 cycle = 4 machine cycles */
+  cpu |> machineCycles(cycles / 4);
 
 module Ops = {
   type state = {
@@ -167,29 +168,40 @@ module Ops = {
     mmu: Mmu.t,
     gpu: Gpu.t,
   };
-  type op = state => (t, Mmu.t);
-  let nop: op = ({mmu, cpu}) => (machineCycles(1, cpu), mmu);
+  type op = state => state;
+  let newState = (~cpu=?, ~mmu=?, ~gpu=?, old: state) =>
+    Belt.{
+      cpu: Option.getWithDefault(cpu, old.cpu),
+      mmu: Option.getWithDefault(mmu, old.mmu),
+      gpu: Option.getWithDefault(gpu, old.gpu),
+    };
+  let nop: op = (s: state) => s |> newState(~cpu=machineCycles(1, s.cpu));
   /* 01 */
   let ld_bc_nn: op =
-    ({mmu, gpu, cpu}) => {
+    ({mmu, gpu, cpu} as s) => {
       let pc = programCount(cpu);
       let (c, m) = Mmu.read8(pc, {gpu, mmu});
       let (b, m) = Mmu.read8(pc + 1, {gpu, mmu: m});
-      (
-        cpu |> setRegisters(~b, ~c) |> machineCycles(3) |> incrementPc(2),
-        m,
-      );
+      s
+      |> newState(
+           ~cpu=
+             cpu
+             |> setRegisters(~b, ~c)
+             |> machineCycles(3)
+             |> incrementPc(2),
+           ~mmu=m,
+         );
     };
   /* 02 */
   let ld_m_bc_a: op =
-    ({mmu, gpu, cpu}) => {
+    ({mmu, gpu, cpu} as s) => {
       let {a} = cpu.registers;
       let (mmuWrite, _gpu) = Mmu.write8(rBc(cpu), a, {mmu, gpu});
-      (cpu |> machineCycles(2), mmuWrite);
+      s |> newState(~cpu=cpu |> machineCycles(2), ~mmu=mmuWrite);
     };
   /* 03 */
   let inc_bc: op =
-    ({mmu, cpu}) => {
+    ({cpu} as s) => {
       let c = (cpu.registers.c + 1) land 0xff; /* wrap after 255, i.e. 256 = 0 */
       let b =
         if (c === 0) {
@@ -197,72 +209,111 @@ module Ops = {
         } else {
           cpu.registers.b;
         };
-      (cpu |> setRegisters(~b, ~c) |> machineCycles(2), mmu);
+      s |> newState(~cpu=cpu |> setRegisters(~b, ~c) |> machineCycles(2));
     };
   /* 04 */
   let inc_b: op =
-    ({mmu, cpu}) => {
+    ({cpu} as s) => {
       let b = (cpu.registers.b + 1) land 0xff;
       let f = cpu.registers.f land 0x10;
-      /* let f = Flags.setFlag(Z, b === 0 ? 1 : 0, f); */
-      (
-        cpu
-        |> setRegisters(~b)
-        |> setFlag(Z, b2i(b === 0), ~initialValue=f)
-        |> machineCycles(1),
-        mmu,
-      );
+      s
+      |> newState(
+           ~cpu=
+             cpu
+             |> setRegisters(~b)
+             |> setFlag(Z, b2i(b === 0), ~initialValue=f)
+             |> machineCycles(1),
+         );
     };
   /* 05 */
   let dec_b: op =
-    ({mmu, cpu}) => {
+    ({cpu} as s) => {
       let b = (cpu.registers.b - 1) land 0xff;
       let f = cpu.registers.f land 0x10;
-      (
-        cpu
-        |> setRegisters(~b)
-        |> setFlag(Z, b2i(b === 0), ~initialValue=f)
-        |> setFlag(N, 1)
-        |> machineCycles(2),
-        mmu,
-      );
+      s
+      |> newState(
+           ~cpu=
+             cpu
+             |> setRegisters(~b)
+             |> setFlag(Z, b2i(b === 0), ~initialValue=f)
+             |> setFlag(N, 1)
+             |> machineCycles(2),
+         );
     };
-  /* 06 */
+  /* 06: LD B,d8 */
   let ld_b_n: op =
-    ({mmu, gpu, cpu}) => {
+    ({mmu, gpu, cpu} as s) => {
       let pc = programCount(cpu);
       let (b, m) = Mmu.read8(pc, {gpu, mmu});
-      (cpu |> setRegisters(~b) |> machineCycles(2) |> incrementPc(1), m);
+      s
+      |> newState(
+           ~cpu=
+             cpu |> setRegisters(~b) |> machineCycles(2) |> incrementPc(1),
+           ~mmu=m,
+         );
     };
-  /* 07 */
+  /* 07: RLCA */
   let rlca: op =
-    ({mmu, cpu}) => {
+    ({cpu} as s) => {
       let {a} = cpu.registers;
       let highBit = a land 0b10000000 > 0 ? 1 : 0;
       let a' = (a lsl 1 + highBit) land 255;
-      (
-        cpu
-        |> machineCycles(1)
-        |> setRegisters(~a=a')
-        |> setFlag(Flags.C, highBit),
-        mmu,
-      );
+      s
+      |> newState(
+           ~cpu=
+             cpu
+             |> machineCycles(1)
+             |> setRegisters(~a=a')
+             |> setFlag(Flags.C, highBit),
+         );
     };
-  let rla: op =
-    ({mmu, cpu}) => {
-      Js.log("RLA");
-      (cpu |> machineCycles(1), mmu);
+  /* 08: LD (a16),SP */
+  let ld_m_nn_sp: op =
+    ({mmu, cpu, gpu} as s) => {
+      let pc = programCount(cpu);
+      let (addr, mmu) = Mmu.read16(pc, {mmu, gpu});
+      let (mmu, gpu) = Mmu.write8(addr, cpu.registers.sp, {mmu, gpu});
+      s |> newState(~cpu=cpu |> cycles(20) |> incrementPc(2), ~mmu, ~gpu);
     };
-
+  /* 09: ADD HL,BC */
+  let add_hl_bc: op =
+    ({cpu} as s) => {
+      let hl = rHl(cpu) + rBc(cpu);
+      let h = hl lsr 8 land 255;
+      let l = hl land 255;
+      let carry = hl > 0xffff;
+      s
+      |> newState(
+           ~cpu=
+             cpu
+             |> setRegisters(~h, ~l)
+             |> setFlag(Flags.C, b2i(carry))
+             |> machineCycles(2),
+         );
+    };
+  /* 0A: LD A,(BC) */
+  let ld_a_m_bc: op =
+    ({cpu} as s) => {
+      let a = rBc(cpu);
+      s |> newState(~cpu=cpu |> setRegisters(~a) |> machineCycles(2));
+    };
+  /* 0F */
   let rrca: op =
-    ({mmu, cpu}) => {
+    ({cpu} as s) => {
       Js.log("RRCA");
-      (cpu |> machineCycles(1), mmu);
+      s |> newState(~cpu=cpu |> machineCycles(1));
     };
+  /* 17 */
+  let rla: op =
+    ({cpu} as s) => {
+      Js.log("RLA");
+      s |> newState(~cpu=cpu |> machineCycles(1));
+    };
+  /* 1F */
   let rra: op =
-    ({mmu, cpu}) => {
+    ({cpu} as s) => {
       Js.log("RRA");
-      (cpu |> machineCycles(1), mmu);
+      s |> newState(~cpu=cpu |> machineCycles(1));
     };
 };
 
@@ -277,14 +328,14 @@ let exec: int => Ops.op =
     | 0x05 => Ops.dec_b
     | 0x06 => Ops.ld_b_n
     | 0x07 => Ops.rlca
-    | 0x08 => Ops.nop
+    | 0x08 => Ops.ld_m_nn_sp
     | 0x09 => Ops.nop
     | 0x0A => Ops.nop
     | 0x0B => Ops.nop
     | 0x0C => Ops.nop
     | 0x0D => Ops.nop
     | 0x0E => Ops.nop
-    | 0x0F => Ops.nop
+    | 0x0F => Ops.rrca
     | 0x10 => Ops.nop
     | 0x11 => Ops.nop
     | 0x12 => Ops.nop
@@ -292,7 +343,7 @@ let exec: int => Ops.op =
     | 0x14 => Ops.nop
     | 0x15 => Ops.nop
     | 0x16 => Ops.nop
-    | 0x17 => Ops.nop
+    | 0x17 => Ops.rla
     | 0x18 => Ops.nop
     | 0x19 => Ops.nop
     | 0x1A => Ops.nop
@@ -300,7 +351,7 @@ let exec: int => Ops.op =
     | 0x1C => Ops.nop
     | 0x1D => Ops.nop
     | 0x1E => Ops.nop
-    | 0x1F => Ops.nop
+    | 0x1F => Ops.rra
     | 0x20 => Ops.nop
     | 0x21 => Ops.nop
     | 0x22 => Ops.nop
