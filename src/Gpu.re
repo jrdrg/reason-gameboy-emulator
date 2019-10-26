@@ -1,5 +1,11 @@
+type gpuMode =
+  | Hblank
+  | Vblank
+  | OamRead
+  | VramRead;
+
 type t = {
-  mode: int,
+  mode: gpuMode,
   clock: int,
   line: int,
   vram: array(int),
@@ -10,10 +16,10 @@ type t = {
 /**
  * 384 8x8 tiles
  */
-let initTileset = () => Array.make(384, Array.make(8, Array.make(8, 0)));
+let initTileset = () => Array.make(512, Array.make(8, Array.make(8, 0)));
 
 let make = () => {
-  mode: 0,
+  mode: Hblank,
   clock: 0,
   line: 0,
   vram: Array.make(8192, 0),
@@ -22,7 +28,7 @@ let make = () => {
 };
 
 let reset = () => {
-  mode: 0,
+  mode: Hblank,
   line: 0,
   clock: 0,
   vram: Array.make(8192, 0),
@@ -54,7 +60,7 @@ let updateTile = (addr: int, gpu: t) => {
     0,
     7,
     x => {
-      Js.log(x);
+      Js.log2("updateTile", x);
       /* Get bit index for this pixel */
       let sx = 1 lsl (7 - x);
       let b1 = gpu.vram[addr] land sx > 0 ? 1 : 0;
@@ -78,7 +84,7 @@ let step = (mCycles: int, renderer: Renderer.t, gpu: t) => {
    */
   switch (gpu.mode) {
   /* hblank - after last one, render to canvas */
-  | 0 =>
+  | Hblank =>
     if (modeclock >= 51) {
       Js.log("hblank");
       let clock = 0;
@@ -86,22 +92,24 @@ let step = (mCycles: int, renderer: Renderer.t, gpu: t) => {
       if (line == 143) {
         /* enter vblank */
         Js.log("Render to screen");
-        {...gpu, clock, line, mode: 1} |> Renderer.renderToScreen(renderer);
+        let gpu' = {...gpu, clock, line, mode: Vblank};
+        Renderer.renderToScreen(renderer);
+        gpu';
       } else {
-        {...gpu, clock, line, mode: 2};
+        {...gpu, clock, line, mode: OamRead};
       };
     } else {
       gpu;
     }
   /* vblank - 10 lines */
-  | 1 =>
+  | Vblank =>
     if (modeclock >= 114) {
       Js.log("vblank");
       let clock = 0;
       let line = gpu.line + 1;
       /* 10 lines after 143 */
       if (line > 153) {
-        {...gpu, clock, line: 0, mode: 2};
+        {...gpu, clock, line: 0, mode: OamRead};
       } else {
         {...gpu, clock, line};
       };
@@ -109,32 +117,35 @@ let step = (mCycles: int, renderer: Renderer.t, gpu: t) => {
       gpu;
     }
   /* oam read */
-  | 2 =>
+  | OamRead =>
     if (modeclock >= 20) {
       Js.log("oam read");
       {
         /* enter scanline mode */
         ...gpu,
         clock: 0,
-        mode: 3,
+        mode: VramRead,
       };
     } else {
       gpu;
     }
   /* vram read, scanline active */
-  | 3 =>
+  | VramRead =>
     if (modeclock >= 43) {
       Js.log("vram read");
       {
         /* enter hblank */
         ...gpu,
         clock: 0,
-        mode: 0,
+        mode: Hblank,
       }
-      |> Renderer.renderScan;
+      |> Renderer.renderScan(renderer);
     } else {
       gpu;
     }
-  | _ => gpu
   };
 };
+
+let read8 = _gpu => 0;
+
+let write8 = gpu => gpu;
