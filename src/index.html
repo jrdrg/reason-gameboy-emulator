@@ -9,6 +9,12 @@
       width: 320px;
       height: 288px;
     }
+    .fps {
+      position: absolute;
+      padding: 10px;
+      bottom: 0;
+      right: 0;
+    }
   </style>
 </head>
 
@@ -16,6 +22,7 @@
   <div id="app">
     <canvas id="screen" height="160" width="144" />
   </div>
+  <div class="fps">FPS: <span id="fps-num">?</span></div>
 
   <script src="../build/Index.js"></script>
 </body>
