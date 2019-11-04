@@ -1,12 +1,14 @@
 type gpuMode;
 
 type t = {
-  mode: gpuMode,
+  bgmap: int,
+  bgtile: int,
   clock: int,
   line: int,
-  vram: array(int),
+  mode: gpuMode,
   oam: array(int),
   tileset: array(array(array(int))),
+  vram: array(int),
 };
 
 let make: unit => t;

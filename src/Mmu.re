@@ -116,7 +116,7 @@ let read8 = (addr, {mmu, gpu}: state) =>
      0x34 + (0x12 << 8) = 0x1234
  */
 let read16 = (addr, {gpu} as state: state) => {
-  Js.log(Printf.sprintf("Reading word %x", addr));
+  // Js.log(Printf.sprintf("Reading word %x", addr));
   let (a, mmu) = read8(addr, state);
   let (b, mmu) = read8(addr + 1, {gpu, mmu});
   let c = b lsl 8;
@@ -125,7 +125,7 @@ let read16 = (addr, {gpu} as state: state) => {
 
 let write8 = (addr, v, {gpu, mmu}: state) => {
   /* let {mmu, gpu} = state; */
-  Js.log(Printf.sprintf("Writing %x to addr %x", v, addr));
+  // Js.log(Printf.sprintf("Writing %x to addr %x", v, addr));
   switch (addr land 0xf000) {
   /* | 0x0000 | 0x1000  => */
   | 0x6000

@@ -1,3 +1,6 @@
+let screen_width = 160;
+let screen_height = 144;
+
 type gpuMode =
   | Hblank
   | Vblank
@@ -5,12 +8,14 @@ type gpuMode =
   | VramRead;
 
 type t = {
-  mode: gpuMode,
+  bgmap: int,
+  bgtile: int,
   clock: int,
   line: int,
-  vram: array(int),
-  oam: array(int), /* 0xFE00 to 0xFE9F */
+  mode: gpuMode,
+  oam: array(int),
   tileset: array(array(array(int))),
+  vram: array(int),
 };
 
 /**
@@ -19,6 +24,8 @@ type t = {
 let initTileset = () => Array.make(512, Array.make(8, Array.make(8, 0)));
 
 let make = () => {
+  bgmap: 0,
+  bgtile: 0,
   mode: Hblank,
   clock: 0,
   line: 0,
@@ -28,6 +35,8 @@ let make = () => {
 };
 
 let reset = () => {
+  bgmap: 0,
+  bgtile: 0,
   mode: Hblank,
   line: 0,
   clock: 0,
@@ -60,7 +69,6 @@ let updateTile = (addr: int, gpu: t) => {
     0,
     7,
     x => {
-      Js.log2("updateTile", x);
       /* Get bit index for this pixel */
       let sx = 1 lsl (7 - x);
       let b1 = gpu.vram[addr] land sx > 0 ? 1 : 0;
@@ -70,6 +78,79 @@ let updateTile = (addr: int, gpu: t) => {
     },
   );
   ();
+};
+
+let renderScan = (renderer: Renderer.t, gpu: t) => {
+  open Belt;
+  /* TODO: move this into GPU.t */
+  let scrx = 0;
+  let scry = 0;
+  let palette = [|55, 192, 96, 0|];
+  /* 255; break;
+     case 1: GPU._palette.bg[i] = 192; break;
+     case 2: GPU._palette.bg[i] = 96; break;
+     case 3: GPU._palette.bg[i] = 0; b  */
+  // let {screen} = renderer;
+  // let screenData = screen |> Canvas.data;
+
+  let mapoffs = gpu.bgmap == 1 ? 0x1C00 : 0x1800;
+
+  // Which line of tiles to use in the map
+  let mapoffs = mapoffs + (gpu.line + scry land 255) lsr 3;
+
+  // Which tile to start with in the map line
+  let lineoffs = scrx lsr 3;
+
+  // Which line of pixels to use in the tiles
+  let y = (gpu.line + scry) land 7;
+
+  // Where in the tileline to start
+  let x = scrx land 7;
+
+  let tile = gpu.vram[mapoffs + lineoffs]->Option.getWithDefault(0);
+
+  // If the tile data set in use is #1, the
+  // indices are signed; calculate a real tile offset
+  let tile = gpu.bgtile == 1 && tile < 128 ? tile + 256 : tile;
+
+  // Where to render on the canvas
+  let canvasoffs = gpu.line * screen_width * 4;
+
+  let rec setPixels = (scrX: int, tile: int, xc: int, cOff: int, lOff: int) => {
+    switch (scrX) {
+    | 160 => ()
+    | _ =>
+      let (tile', xc', cOff', lOff') =
+        gpu.tileset[tile]
+        |> Js.Option.andThen((. t) => t[y])
+        |> Js.Option.andThen((. row) => row[xc])
+        |> Js.Option.andThen((. p) => palette[p])
+        |> Js.Option.map((. color) => {
+             Renderer.setPixel(renderer, ~pixel=cOff + 3, ~color);
+
+             let tile' =
+               xc == 8 ?
+                 gpu.vram[mapoffs + lineoffs]->Option.getWithDefault(0) : tile;
+
+             let (xc', lOff', tile') =
+               xc == 8 ?
+                 (
+                   0,
+                   (lOff + 1) land 0b11111, // 31
+                   gpu.bgtile == 1 && tile' < 128 ? tile' + 256 : tile',
+                 ) :
+                 (xc + 1, lOff, tile);
+
+             (tile', xc', cOff + 4, lOff');
+           })
+        |> Js.Option.getWithDefault((tile, xc, cOff, lOff));
+
+      setPixels(scrX + 1, tile', xc', cOff', lOff');
+    };
+  };
+
+  setPixels(0, tile, x, canvasoffs, lineoffs);
+  gpu;
 };
 
 let step = (mCycles: int, renderer: Renderer.t, gpu: t) => {
@@ -86,12 +167,10 @@ let step = (mCycles: int, renderer: Renderer.t, gpu: t) => {
   /* hblank - after last one, render to canvas */
   | Hblank =>
     if (modeclock >= 51) {
-      Js.log("hblank");
       let clock = 0;
       let line = gpu.line + 1;
-      if (line == 143) {
+      if (line == screen_height - 1) {
         /* enter vblank */
-        Js.log("Render to screen");
         let gpu' = {...gpu, clock, line, mode: Vblank};
         Renderer.renderToScreen(renderer);
         gpu';
@@ -104,11 +183,10 @@ let step = (mCycles: int, renderer: Renderer.t, gpu: t) => {
   /* vblank - 10 lines */
   | Vblank =>
     if (modeclock >= 114) {
-      Js.log("vblank");
       let clock = 0;
       let line = gpu.line + 1;
       /* 10 lines after 143 */
-      if (line > 153) {
+      if (line > screen_height - 1 + 10) {
         {...gpu, clock, line: 0, mode: OamRead};
       } else {
         {...gpu, clock, line};
@@ -119,7 +197,6 @@ let step = (mCycles: int, renderer: Renderer.t, gpu: t) => {
   /* oam read */
   | OamRead =>
     if (modeclock >= 20) {
-      Js.log("oam read");
       {
         /* enter scanline mode */
         ...gpu,
@@ -132,14 +209,13 @@ let step = (mCycles: int, renderer: Renderer.t, gpu: t) => {
   /* vram read, scanline active */
   | VramRead =>
     if (modeclock >= 43) {
-      Js.log("vram read");
       {
         /* enter hblank */
         ...gpu,
         clock: 0,
         mode: Hblank,
       }
-      |> Renderer.renderScan(renderer);
+      |> renderScan(renderer);
     } else {
       gpu;
     }
