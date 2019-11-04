@@ -29,7 +29,7 @@ let reset = state => {
   gpu: Gpu.make(),
 };
 
-let frame = (s: state) => {
+let rec execInstructionsForFrame = (s: state, currCycles: int, maxCycles: int) => {
   let programCount = Cpu.programCount(s.cpu);
   let (instruction, mmu) =
     Mmu.read8(programCount, {gpu: s.gpu, mmu: s.mmu});
@@ -45,5 +45,15 @@ let frame = (s: state) => {
   s.cpu.clock = s.cpu.clock + cpu.registers.mCycles;
   /* increment PC and wrap around pc if it's more than 2 bytes */
   s.cpu.registers.pc = (Cpu.programCount(cpu) + 1) land 0xffff;
-  s;
+  if (currCycles >= maxCycles) {
+    s;
+  } else {
+    execInstructionsForFrame(s, currCycles + 1, maxCycles);
+  };
+};
+
+let frame = (s: state) => {
+  let mCycles_in_frame = 17556;
+  let frameClock = s.cpu.clock + mCycles_in_frame;
+  execInstructionsForFrame(s, s.cpu.clock, frameClock);
 };
