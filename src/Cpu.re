@@ -300,19 +300,16 @@ module Ops = {
   /* 0F */
   let rrca: op =
     ({cpu} as s) => {
-      Js.log("RRCA");
       s |> newState(~cpu=cpu |> machineCycles(1));
     };
   /* 17 */
   let rla: op =
     ({cpu} as s) => {
-      Js.log("RLA");
       s |> newState(~cpu=cpu |> machineCycles(1));
     };
   /* 1F */
   let rra: op =
     ({cpu} as s) => {
-      Js.log("RRA");
       s |> newState(~cpu=cpu |> machineCycles(1));
     };
 };
@@ -329,8 +326,8 @@ let exec: int => Ops.op =
     | 0x06 => Ops.ld_b_n
     | 0x07 => Ops.rlca
     | 0x08 => Ops.ld_m_nn_sp
-    | 0x09 => Ops.nop
-    | 0x0A => Ops.nop
+    | 0x09 => Ops.add_hl_bc
+    | 0x0A => Ops.ld_a_m_bc
     | 0x0B => Ops.nop
     | 0x0C => Ops.nop
     | 0x0D => Ops.nop
