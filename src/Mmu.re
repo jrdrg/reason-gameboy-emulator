@@ -136,7 +136,7 @@ let write8 = (addr, v, {gpu, mmu}: state) => {
   | 0x8000
   | 0x9000 =>
     gpu.vram[addr land 0x1fff] = v;
-    gpu |> Gpu.updateTile(addr);
+    Gpu.updateTile(addr, gpu);
     (mmu, gpu);
   | _ => (mmu, gpu)
   };

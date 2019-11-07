@@ -45,6 +45,7 @@ let rec execInstructionsForFrame = (s: state, currCycles: int, maxCycles: int) =
   s.cpu.clock = s.cpu.clock + cpu.registers.mCycles;
   /* increment PC and wrap around pc if it's more than 2 bytes */
   s.cpu.registers.pc = (Cpu.programCount(cpu) + 1) land 0xffff;
+
   if (currCycles >= maxCycles) {
     s;
   } else {
