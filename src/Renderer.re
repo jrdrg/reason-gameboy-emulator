@@ -12,6 +12,9 @@ let make = () => {
   /* initialize empty screen */
   screenData |> Array.iteri((idx, _i) => screenData[idx] = 196);
   canvas |> Canvas.putImageData(screen, 0, 0);
+  Js.log(
+    Printf.sprintf("Initialized screen data: %d", Array.length(screenData)),
+  );
   {canvas, screen};
 };
 
