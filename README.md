@@ -12,6 +12,10 @@ http://www.pastraiser.com/cpu/gameboy/gameboy_opcodes.html
 
 https://fms.komkon.org/GameBoy/Tech/Software.html
 
+https://gekkio.fi/files/gb-docs/gbctr.pdf
+
+http://www.devrs.com/gb/files/opcodes.html
+
 ## Run Project
 
 ```sh
