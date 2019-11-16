@@ -193,6 +193,358 @@ module Ops = {
     };
   let nop: op = (s: state) => s |> newState(~cpu=machineCycles(1, s.cpu));
 
+  module Load_nn_8 = {
+    /* 06: LD B,d8 */
+    let ld_b_n: op =
+      ({mmu, gpu, cpu} as s) => {
+        let pc = programCount(cpu);
+        let (b, m) = Mmu.read8(pc, {gpu, mmu});
+        s
+        |> newState(
+             ~cpu=
+               cpu |> setRegisters(~b) |> machineCycles(2) |> incrementPc(1),
+             ~mmu=m,
+           );
+      };
+    let ld_c_n: op =
+      ({mmu, gpu, cpu} as s) => {
+        let pc = programCount(cpu);
+        let (c, m) = Mmu.read8(pc, {gpu, mmu});
+        s
+        |> newState(
+             ~cpu=
+               cpu |> setRegisters(~c) |> machineCycles(2) |> incrementPc(1),
+             ~mmu=m,
+           );
+      };
+    let ld_d_n: op =
+      ({mmu, gpu, cpu} as s) => {
+        let pc = programCount(cpu);
+        let (d, m) = Mmu.read8(pc, {gpu, mmu});
+        s
+        |> newState(
+             ~cpu=
+               cpu |> setRegisters(~d) |> machineCycles(2) |> incrementPc(1),
+             ~mmu=m,
+           );
+      };
+    let ld_e_n: op =
+      ({mmu, gpu, cpu} as s) => {
+        let pc = programCount(cpu);
+        let (e, m) = Mmu.read8(pc, {gpu, mmu});
+        s
+        |> newState(
+             ~cpu=
+               cpu |> setRegisters(~e) |> machineCycles(2) |> incrementPc(1),
+             ~mmu=m,
+           );
+      };
+    let ld_h_n: op =
+      ({mmu, gpu, cpu} as s) => {
+        let pc = programCount(cpu);
+        let (h, m) = Mmu.read8(pc, {gpu, mmu});
+        s
+        |> newState(
+             ~cpu=
+               cpu |> setRegisters(~h) |> machineCycles(2) |> incrementPc(1),
+             ~mmu=m,
+           );
+      };
+    let ld_l_n: op =
+      ({mmu, gpu, cpu} as s) => {
+        let pc = programCount(cpu);
+        let (l, m) = Mmu.read8(pc, {gpu, mmu});
+        s
+        |> newState(
+             ~cpu=
+               cpu |> setRegisters(~l) |> machineCycles(2) |> incrementPc(1),
+             ~mmu=m,
+           );
+      };
+  };
+
+  module Load_r1_r2 = {
+    let ld_b_b: op =
+      ({cpu} as s) => {
+        let {b} = cpu.registers;
+        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~b));
+      };
+    let ld_b_c: op =
+      ({cpu} as s) => {
+        let {c} = cpu.registers;
+        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~b=c));
+      };
+    let ld_b_d: op =
+      ({cpu} as s) => {
+        let {d} = cpu.registers;
+        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~b=d));
+      };
+    let ld_b_e: op =
+      ({cpu} as s) => {
+        let {e} = cpu.registers;
+        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~b=e));
+      };
+    let ld_b_h: op =
+      ({cpu} as s) => {
+        let {h} = cpu.registers;
+        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~b=h));
+      };
+    let ld_b_l: op =
+      ({cpu} as s) => {
+        let {l} = cpu.registers;
+        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~b=l));
+      };
+    let ld_b_m_hl: op =
+      ({cpu, mmu, gpu} as s) => {
+        let (hl, mmu) = Mmu.read8(rHl(cpu), {mmu, gpu});
+        s
+        |> newState(
+             ~cpu=cpu |> machineCycles(2) |> setRegisters(~b=hl),
+             ~mmu,
+           );
+      };
+    let ld_c_b: op =
+      ({cpu} as s) => {
+        let {b} = cpu.registers;
+        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~c=b));
+      };
+    let ld_c_c: op =
+      ({cpu} as s) => {
+        let {c} = cpu.registers;
+        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~c));
+      };
+    let ld_c_d: op =
+      ({cpu} as s) => {
+        let {d} = cpu.registers;
+        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~c=d));
+      };
+    let ld_c_e: op =
+      ({cpu} as s) => {
+        let {e} = cpu.registers;
+        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~c=e));
+      };
+    let ld_c_h: op =
+      ({cpu} as s) => {
+        let {h} = cpu.registers;
+        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~c=h));
+      };
+    let ld_c_l: op =
+      ({cpu} as s) => {
+        let {l} = cpu.registers;
+        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~c=l));
+      };
+    let ld_c_m_hl: op =
+      ({cpu, mmu, gpu} as s) => {
+        let (hl, mmu) = Mmu.read8(rHl(cpu), {mmu, gpu});
+        s
+        |> newState(
+             ~cpu=cpu |> machineCycles(2) |> setRegisters(~c=hl),
+             ~mmu,
+           );
+      };
+    let ld_d_b: op =
+      ({cpu} as s) => {
+        let {b} = cpu.registers;
+        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~d=b));
+      };
+    let ld_d_c: op =
+      ({cpu} as s) => {
+        let {c} = cpu.registers;
+        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~d=c));
+      };
+    let ld_d_d: op =
+      ({cpu} as s) => {
+        let {d} = cpu.registers;
+        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~d));
+      };
+    let ld_d_e: op =
+      ({cpu} as s) => {
+        let {e} = cpu.registers;
+        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~d=e));
+      };
+    let ld_d_h: op =
+      ({cpu} as s) => {
+        let {h} = cpu.registers;
+        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~d=h));
+      };
+    let ld_d_l: op =
+      ({cpu} as s) => {
+        let {l} = cpu.registers;
+        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~d=l));
+      };
+    let ld_d_m_hl: op =
+      ({cpu, mmu, gpu} as s) => {
+        let (hl, mmu) = Mmu.read8(rHl(cpu), {mmu, gpu});
+        s
+        |> newState(
+             ~cpu=cpu |> machineCycles(2) |> setRegisters(~d=hl),
+             ~mmu,
+           );
+      };
+    let ld_e_b: op =
+      ({cpu} as s) => {
+        let {b} = cpu.registers;
+        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~e=b));
+      };
+    let ld_e_c: op =
+      ({cpu} as s) => {
+        let {c} = cpu.registers;
+        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~e=c));
+      };
+    let ld_e_d: op =
+      ({cpu} as s) => {
+        let {d} = cpu.registers;
+        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~e=d));
+      };
+    let ld_e_e: op =
+      ({cpu} as s) => {
+        let {e} = cpu.registers;
+        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~e));
+      };
+    let ld_e_h: op =
+      ({cpu} as s) => {
+        let {h} = cpu.registers;
+        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~e=h));
+      };
+    let ld_e_l: op =
+      ({cpu} as s) => {
+        let {l} = cpu.registers;
+        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~e=l));
+      };
+    let ld_e_m_hl: op =
+      ({cpu, mmu, gpu} as s) => {
+        let (hl, mmu) = Mmu.read8(rHl(cpu), {mmu, gpu});
+        s
+        |> newState(
+             ~cpu=cpu |> machineCycles(2) |> setRegisters(~e=hl),
+             ~mmu,
+           );
+      };
+    let ld_h_b: op =
+      ({cpu} as s) => {
+        let {b} = cpu.registers;
+        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~h=b));
+      };
+    let ld_h_c: op =
+      ({cpu} as s) => {
+        let {c} = cpu.registers;
+        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~h=c));
+      };
+    let ld_h_d: op =
+      ({cpu} as s) => {
+        let {d} = cpu.registers;
+        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~h=d));
+      };
+    let ld_h_e: op =
+      ({cpu} as s) => {
+        let {e} = cpu.registers;
+        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~h=e));
+      };
+    let ld_h_h: op =
+      ({cpu} as s) => {
+        let {h} = cpu.registers;
+        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~h));
+      };
+    let ld_h_l: op =
+      ({cpu} as s) => {
+        let {l} = cpu.registers;
+        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~h=l));
+      };
+    let ld_h_m_hl: op =
+      ({cpu, mmu, gpu} as s) => {
+        let (hl, mmu) = Mmu.read8(rHl(cpu), {mmu, gpu});
+        s
+        |> newState(
+             ~cpu=cpu |> machineCycles(2) |> setRegisters(~h=hl),
+             ~mmu,
+           );
+      };
+    let ld_l_b: op =
+      ({cpu} as s) => {
+        let {b} = cpu.registers;
+        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~l=b));
+      };
+    let ld_l_c: op =
+      ({cpu} as s) => {
+        let {c} = cpu.registers;
+        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~l=c));
+      };
+    let ld_l_d: op =
+      ({cpu} as s) => {
+        let {d} = cpu.registers;
+        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~l=d));
+      };
+    let ld_l_e: op =
+      ({cpu} as s) => {
+        let {e} = cpu.registers;
+        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~l=e));
+      };
+    let ld_l_h: op =
+      ({cpu} as s) => {
+        let {h} = cpu.registers;
+        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~l=h));
+      };
+    let ld_l_l: op =
+      ({cpu} as s) => {
+        let {l} = cpu.registers;
+        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~l));
+      };
+    let ld_l_m_hl: op =
+      ({cpu, mmu, gpu} as s) => {
+        let (hl, mmu) = Mmu.read8(rHl(cpu), {mmu, gpu});
+        s
+        |> newState(
+             ~cpu=cpu |> machineCycles(2) |> setRegisters(~l=hl),
+             ~mmu,
+           );
+      };
+    let ld_m_hl_8 = (register: int, {cpu, mmu, gpu}) => {
+      let (mmu, gpu) = Mmu.write8(rHl(cpu), register, {mmu, gpu});
+      (cpu |> machineCycles(2), mmu, gpu);
+    };
+    let ld_m_hl_b: op =
+      ({cpu} as s) => {
+        let (cpu, mmu, gpu) = ld_m_hl_8(cpu.registers.b, s);
+        s |> newState(~cpu, ~mmu, ~gpu);
+      };
+    let ld_m_hl_c: op =
+      ({cpu} as s) => {
+        let (cpu, mmu, gpu) = ld_m_hl_8(cpu.registers.c, s);
+        s |> newState(~cpu, ~mmu, ~gpu);
+      };
+    let ld_m_hl_d: op =
+      ({cpu} as s) => {
+        let (cpu, mmu, gpu) = ld_m_hl_8(cpu.registers.d, s);
+        s |> newState(~cpu, ~mmu, ~gpu);
+      };
+    let ld_m_hl_e: op =
+      ({cpu} as s) => {
+        let (cpu, mmu, gpu) = ld_m_hl_8(cpu.registers.e, s);
+        s |> newState(~cpu, ~mmu, ~gpu);
+      };
+    let ld_m_hl_h: op =
+      ({cpu} as s) => {
+        let (cpu, mmu, gpu) = ld_m_hl_8(cpu.registers.h, s);
+        s |> newState(~cpu, ~mmu, ~gpu);
+      };
+    let ld_m_hl_l: op =
+      ({cpu} as s) => {
+        let (cpu, mmu, gpu) = ld_m_hl_8(cpu.registers.l, s);
+        s |> newState(~cpu, ~mmu, ~gpu);
+      };
+    let ld_m_hl_n: op =
+      ({cpu, mmu, gpu} as s) => {
+        let (n, mmu) = Mmu.read8(programCount(cpu), {mmu, gpu});
+        let (mmu, gpu) = Mmu.write8(rHl(cpu), n, {mmu, gpu});
+        s
+        |> newState(
+             ~cpu=cpu |> machineCycles(3) |> incrementPc(1),
+             ~mmu,
+             ~gpu,
+           );
+      };
+  };
+
   module Load_16_8 = {
     let ld_n_nn = ({cpu, gpu, mmu}) => {
       let pc = programCount(cpu);
@@ -286,6 +638,13 @@ module Ops = {
         let {a} = cpu.registers;
         s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~l=a));
       };
+    let ld_m_c_a: op =
+      ({cpu, mmu, gpu} as s) => {
+        let {a, c} = cpu.registers;
+        let addr = 0xff00 + c;
+        let (mmu, gpu) = Mmu.write8(addr, a, {mmu, gpu});
+        s |> newState(~cpu=cpu |> machineCycles(2), ~mmu, ~gpu);
+      };
   };
 
   module Load_A_8 = {
@@ -348,13 +707,35 @@ module Ops = {
            );
       };
     let ld_a_m_nn: op =
-      ({mmu, gpu, cpu} as s) => {
+      ({cpu, mmu, gpu} as s) => {
         let (addr, mmu) = Mmu.read16(programCount(cpu), {mmu, gpu});
         let (a, mmu) = Mmu.read8(addr, {mmu, gpu});
         s
         |> newState(
              ~cpu=
                cpu |> machineCycles(4) |> incrementPc(2) |> setRegisters(~a),
+             ~mmu,
+           );
+      };
+    let ld_a_m_n: op =
+      ({cpu, mmu, gpu} as s) => {
+        let addr = programCount(cpu);
+        let (a, mmu) = Mmu.read8(addr, {mmu, gpu});
+        s
+        |> newState(
+             ~cpu=
+               cpu |> machineCycles(2) |> incrementPc(1) |> setRegisters(~a),
+             ~mmu,
+           );
+      };
+    let ld_a_m_c: op =
+      ({cpu, mmu, gpu} as s) => {
+        let {c} = cpu.registers;
+        let addr = 0xff00 + c;
+        let (mc, mmu) = Mmu.read8(addr, {mmu, gpu});
+        s
+        |> newState(
+             ~cpu=cpu |> machineCycles(2) |> setRegisters(~a=mc),
              ~mmu,
            );
       };
@@ -509,76 +890,6 @@ module Ops = {
         let (hl', cpu) = dec(hl, ~cycles=3, cpu);
         let (mmu, gpu) = Mmu.write8(addr, hl', {mmu, gpu});
         s |> newState(~cpu, ~mmu, ~gpu);
-      };
-  };
-
-  module Load_nn_8 = {
-    /* 06: LD B,d8 */
-    let ld_b_n: op =
-      ({mmu, gpu, cpu} as s) => {
-        let pc = programCount(cpu);
-        let (b, m) = Mmu.read8(pc, {gpu, mmu});
-        s
-        |> newState(
-             ~cpu=
-               cpu |> setRegisters(~b) |> machineCycles(2) |> incrementPc(1),
-             ~mmu=m,
-           );
-      };
-    let ld_c_n: op =
-      ({mmu, gpu, cpu} as s) => {
-        let pc = programCount(cpu);
-        let (c, m) = Mmu.read8(pc, {gpu, mmu});
-        s
-        |> newState(
-             ~cpu=
-               cpu |> setRegisters(~c) |> machineCycles(2) |> incrementPc(1),
-             ~mmu=m,
-           );
-      };
-    let ld_d_n: op =
-      ({mmu, gpu, cpu} as s) => {
-        let pc = programCount(cpu);
-        let (d, m) = Mmu.read8(pc, {gpu, mmu});
-        s
-        |> newState(
-             ~cpu=
-               cpu |> setRegisters(~d) |> machineCycles(2) |> incrementPc(1),
-             ~mmu=m,
-           );
-      };
-    let ld_e_n: op =
-      ({mmu, gpu, cpu} as s) => {
-        let pc = programCount(cpu);
-        let (e, m) = Mmu.read8(pc, {gpu, mmu});
-        s
-        |> newState(
-             ~cpu=
-               cpu |> setRegisters(~e) |> machineCycles(2) |> incrementPc(1),
-             ~mmu=m,
-           );
-      };
-    let ld_h_n: op =
-      ({mmu, gpu, cpu} as s) => {
-        let pc = programCount(cpu);
-        let (h, m) = Mmu.read8(pc, {gpu, mmu});
-        s
-        |> newState(
-             ~cpu=
-               cpu |> setRegisters(~h) |> machineCycles(2) |> incrementPc(1),
-             ~mmu=m,
-           );
-      };
-    let ld_l_n: op =
-      ({mmu, gpu, cpu} as s) => {
-        let pc = programCount(cpu);
-        let (l, m) = Mmu.read8(pc, {gpu, mmu});
-        s
-        |> newState(
-             ~cpu=
-               cpu |> setRegisters(~l) |> machineCycles(2) |> incrementPc(1),
-             ~mmu=m,
-           );
       };
   };
 
@@ -855,7 +1166,7 @@ let exec: int => Ops.op =
     | 0x33 => Ops.Increment16.inc_sp
     | 0x34 => Ops.nop
     | 0x35 => Ops.Decrement8.dec_m_hl
-    | 0x36 => Ops.nop
+    | 0x36 => Ops.Load_r1_r2.ld_m_hl_n
     | 0x37 => Ops.nop
     | 0x38 => Ops.nop
     | 0x39 => Ops.nop
@@ -863,62 +1174,62 @@ let exec: int => Ops.op =
     | 0x3B => Ops.Decrement16.dec_sp
     | 0x3C => Ops.Increment8.inc_a
     | 0x3D => Ops.Decrement8.dec_a
-    | 0x3E => Ops.nop
+    | 0x3E => Ops.Load_A_8.ld_a_m_n
     | 0x3F => Ops.nop
-    | 0x40 => Ops.nop
-    | 0x41 => Ops.nop
-    | 0x42 => Ops.nop
-    | 0x43 => Ops.nop
-    | 0x44 => Ops.nop
-    | 0x45 => Ops.nop
-    | 0x46 => Ops.nop
+    | 0x40 => Ops.Load_r1_r2.ld_b_b
+    | 0x41 => Ops.Load_r1_r2.ld_b_c
+    | 0x42 => Ops.Load_r1_r2.ld_b_d
+    | 0x43 => Ops.Load_r1_r2.ld_b_e
+    | 0x44 => Ops.Load_r1_r2.ld_b_h
+    | 0x45 => Ops.Load_r1_r2.ld_b_l
+    | 0x46 => Ops.Load_r1_r2.ld_b_m_hl
     | 0x47 => Ops.Load_8_A.ld_b_a
-    | 0x48 => Ops.nop
-    | 0x49 => Ops.nop
-    | 0x4A => Ops.nop
-    | 0x4B => Ops.nop
-    | 0x4C => Ops.nop
-    | 0x4D => Ops.nop
-    | 0x4E => Ops.nop
+    | 0x48 => Ops.Load_r1_r2.ld_c_b
+    | 0x49 => Ops.Load_r1_r2.ld_c_c
+    | 0x4A => Ops.Load_r1_r2.ld_c_d
+    | 0x4B => Ops.Load_r1_r2.ld_c_e
+    | 0x4C => Ops.Load_r1_r2.ld_c_h
+    | 0x4D => Ops.Load_r1_r2.ld_c_l
+    | 0x4E => Ops.Load_r1_r2.ld_c_m_hl
     | 0x4F => Ops.Load_8_A.ld_c_a
-    | 0x50 => Ops.nop
-    | 0x51 => Ops.nop
-    | 0x52 => Ops.nop
-    | 0x53 => Ops.nop
-    | 0x54 => Ops.nop
-    | 0x55 => Ops.nop
-    | 0x56 => Ops.nop
+    | 0x50 => Ops.Load_r1_r2.ld_d_b
+    | 0x51 => Ops.Load_r1_r2.ld_d_c
+    | 0x52 => Ops.Load_r1_r2.ld_d_d
+    | 0x53 => Ops.Load_r1_r2.ld_d_e
+    | 0x54 => Ops.Load_r1_r2.ld_d_h
+    | 0x55 => Ops.Load_r1_r2.ld_d_l
+    | 0x56 => Ops.Load_r1_r2.ld_d_m_hl
     | 0x57 => Ops.Load_8_A.ld_d_a
-    | 0x58 => Ops.nop
-    | 0x59 => Ops.nop
-    | 0x5A => Ops.nop
-    | 0x5B => Ops.nop
-    | 0x5C => Ops.nop
-    | 0x5D => Ops.nop
-    | 0x5E => Ops.nop
+    | 0x58 => Ops.Load_r1_r2.ld_e_b
+    | 0x59 => Ops.Load_r1_r2.ld_e_c
+    | 0x5A => Ops.Load_r1_r2.ld_e_d
+    | 0x5B => Ops.Load_r1_r2.ld_e_e
+    | 0x5C => Ops.Load_r1_r2.ld_e_h
+    | 0x5D => Ops.Load_r1_r2.ld_e_l
+    | 0x5E => Ops.Load_r1_r2.ld_e_m_hl
     | 0x5F => Ops.Load_8_A.ld_e_a
-    | 0x60 => Ops.nop
-    | 0x61 => Ops.nop
-    | 0x62 => Ops.nop
-    | 0x63 => Ops.nop
-    | 0x64 => Ops.nop
-    | 0x65 => Ops.nop
-    | 0x66 => Ops.nop
+    | 0x60 => Ops.Load_r1_r2.ld_h_b
+    | 0x61 => Ops.Load_r1_r2.ld_h_c
+    | 0x62 => Ops.Load_r1_r2.ld_h_d
+    | 0x63 => Ops.Load_r1_r2.ld_h_e
+    | 0x64 => Ops.Load_r1_r2.ld_h_h
+    | 0x65 => Ops.Load_r1_r2.ld_h_l
+    | 0x66 => Ops.Load_r1_r2.ld_h_m_hl
     | 0x67 => Ops.Load_8_A.ld_h_a
-    | 0x68 => Ops.nop
-    | 0x69 => Ops.nop
-    | 0x6A => Ops.nop
-    | 0x6B => Ops.nop
-    | 0x6C => Ops.nop
-    | 0x6D => Ops.nop
-    | 0x6E => Ops.nop
+    | 0x68 => Ops.Load_r1_r2.ld_l_b
+    | 0x69 => Ops.Load_r1_r2.ld_l_c
+    | 0x6A => Ops.Load_r1_r2.ld_l_d
+    | 0x6B => Ops.Load_r1_r2.ld_l_e
+    | 0x6C => Ops.Load_r1_r2.ld_l_h
+    | 0x6D => Ops.Load_r1_r2.ld_l_l
+    | 0x6E => Ops.Load_r1_r2.ld_l_m_hl
     | 0x6F => Ops.Load_8_A.ld_l_a
-    | 0x70 => Ops.nop
-    | 0x71 => Ops.nop
-    | 0x72 => Ops.nop
-    | 0x73 => Ops.nop
-    | 0x74 => Ops.nop
-    | 0x75 => Ops.nop
+    | 0x70 => Ops.Load_r1_r2.ld_m_hl_b
+    | 0x71 => Ops.Load_r1_r2.ld_m_hl_c
+    | 0x72 => Ops.Load_r1_r2.ld_m_hl_d
+    | 0x73 => Ops.Load_r1_r2.ld_m_hl_e
+    | 0x74 => Ops.Load_r1_r2.ld_m_hl_h
+    | 0x75 => Ops.Load_r1_r2.ld_m_hl_l
     | 0x76 => Ops.nop
     | 0x77 => Ops.Load_8_A.ld_m_hl_a
     | 0x78 => Ops.Load_A_8.ld_a_b
@@ -1027,7 +1338,7 @@ let exec: int => Ops.op =
     | 0xDF => Ops.nop
     | 0xE0 => Ops.nop
     | 0xE1 => Ops.Pop.pop_hl
-    | 0xE2 => Ops.nop
+    | 0xE2 => Ops.Load_8_A.ld_m_c_a
     | 0xE3 => Ops.nop
     | 0xE4 => Ops.nop
     | 0xE5 => Ops.Push.push_hl
@@ -1043,7 +1354,7 @@ let exec: int => Ops.op =
     | 0xEF => Ops.nop
     | 0xF0 => Ops.nop
     | 0xF1 => Ops.Pop.pop_af
-    | 0xF2 => Ops.nop
+    | 0xF2 => Ops.Load_A_8.ld_a_m_c
     | 0xF3 => Ops.nop
     | 0xF4 => Ops.nop
     | 0xF5 => Ops.Push.push_af
@@ -1051,7 +1362,7 @@ let exec: int => Ops.op =
     | 0xF7 => Ops.nop
     | 0xF8 => Ops.nop
     | 0xF9 => Ops.nop
-    | 0xFA => Ops.nop
+    | 0xFA => Ops.Load_A_8.ld_a_m_nn
     | 0xFB => Ops.nop
     | 0xFC => Ops.nop
     | 0xFD => Ops.nop
