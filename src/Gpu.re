@@ -82,7 +82,7 @@ let updateTile = (addr: int, gpu: t) => {
   ();
 };
 
-let getTile = (index: int, gpu: t) => {
+let getTile = (index: int, gpu: t): int => {
   open Belt;
   let tile = gpu.vram[index]->Option.getWithDefault(0);
 
@@ -91,7 +91,7 @@ let getTile = (index: int, gpu: t) => {
   gpu.bgtile == 1 && tile < 128 ? tile + 256 : tile;
 };
 
-let renderScan = (renderer: Renderer.t, gpu: t) => {
+let renderScan = (renderer: Renderer.t, gpu: t): t => {
   open Belt;
   /* TODO: move this into GPU.t */
   let scrx = 0;
