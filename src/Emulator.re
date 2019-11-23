@@ -1,3 +1,5 @@
+exception NoCycles(string);
+
 /* http://marc.rawer.de/Gameboy/Docs/GBCPUman.pdf */
 type state = {
   mutable frameCount: int,
@@ -30,12 +32,20 @@ let reset = state => {
 };
 
 let rec execInstructionsForFrame = (s: state, currCycles: int, maxCycles: int) => {
-  let programCount = Cpu.programCount(s.cpu);
   let (instruction, mmu) =
-    Mmu.read8(programCount, {gpu: s.gpu, mmu: s.mmu});
+    Mmu.read8(Cpu.programCount(s.cpu), {gpu: s.gpu, mmu: s.mmu});
+
+  /* increment PC and wrap around pc if it's more than 2 bytes */
+  s.cpu.registers.pc = (Cpu.programCount(s.cpu) + 1) land 0xffff;
+
   /* execute next instruction */
   let {cpu, mmu}: Cpu.Ops.state =
     Cpu.exec(instruction, {mmu, gpu: s.gpu, cpu: s.cpu});
+
+  if (cpu.registers.mCycles <= 0) {
+    raise(NoCycles(Printf.sprintf("mCycles=0: %x", instruction)));
+  };
+
   /* GPU draw */
   let gpu = s.gpu |> Gpu.step(cpu.registers.mCycles, s.renderer);
   s.gpu = gpu;
@@ -43,8 +53,6 @@ let rec execInstructionsForFrame = (s: state, currCycles: int, maxCycles: int) =
   s.cpu = cpu;
   /* update timer  */
   s.cpu.clock = s.cpu.clock + cpu.registers.mCycles;
-  /* increment PC and wrap around pc if it's more than 2 bytes */
-  s.cpu.registers.pc = (Cpu.programCount(cpu) + 1) land 0xffff;
 
   if (currCycles >= maxCycles) {
     s;
