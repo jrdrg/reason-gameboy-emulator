@@ -273,7 +273,7 @@ module Ops = {
       mmu: Option.getWithDefault(mmu, old.mmu),
       gpu: Option.getWithDefault(gpu, old.gpu),
     };
-  let nop: op = (s: state) => s |> newState(~cpu=machineCycles(1, s.cpu));
+  let nop: op = (s: state) => newState(~cpu=machineCycles(1, s.cpu), s);
 
   module Load_nn_8 = {
     /* 06: LD B,d8 */
@@ -281,67 +281,67 @@ module Ops = {
       ({mmu, gpu, cpu} as s) => {
         let pc = programCount(cpu);
         let (b, m) = Mmu.read8(pc, {gpu, mmu});
-        s
-        |> newState(
-             ~cpu=
-               cpu |> setRegisters(~b) |> machineCycles(2) |> incrementPc(1),
-             ~mmu=m,
-           );
+        newState(
+          ~cpu=
+            cpu |> setRegisters(~b) |> machineCycles(2) |> incrementPc(1),
+          ~mmu=m,
+          s,
+        );
       };
     let ld_c_n: op =
       ({mmu, gpu, cpu} as s) => {
         let pc = programCount(cpu);
         let (c, m) = Mmu.read8(pc, {gpu, mmu});
-        s
-        |> newState(
-             ~cpu=
-               cpu |> setRegisters(~c) |> machineCycles(2) |> incrementPc(1),
-             ~mmu=m,
-           );
+        newState(
+          ~cpu=
+            cpu |> setRegisters(~c) |> machineCycles(2) |> incrementPc(1),
+          ~mmu=m,
+          s,
+        );
       };
     let ld_d_n: op =
       ({mmu, gpu, cpu} as s) => {
         let pc = programCount(cpu);
         let (d, m) = Mmu.read8(pc, {gpu, mmu});
-        s
-        |> newState(
-             ~cpu=
-               cpu |> setRegisters(~d) |> machineCycles(2) |> incrementPc(1),
-             ~mmu=m,
-           );
+        newState(
+          ~cpu=
+            cpu |> setRegisters(~d) |> machineCycles(2) |> incrementPc(1),
+          ~mmu=m,
+          s,
+        );
       };
     let ld_e_n: op =
       ({mmu, gpu, cpu} as s) => {
         let pc = programCount(cpu);
         let (e, m) = Mmu.read8(pc, {gpu, mmu});
-        s
-        |> newState(
-             ~cpu=
-               cpu |> setRegisters(~e) |> machineCycles(2) |> incrementPc(1),
-             ~mmu=m,
-           );
+        newState(
+          ~cpu=
+            cpu |> setRegisters(~e) |> machineCycles(2) |> incrementPc(1),
+          ~mmu=m,
+          s,
+        );
       };
     let ld_h_n: op =
       ({mmu, gpu, cpu} as s) => {
         let pc = programCount(cpu);
         let (h, m) = Mmu.read8(pc, {gpu, mmu});
-        s
-        |> newState(
-             ~cpu=
-               cpu |> setRegisters(~h) |> machineCycles(2) |> incrementPc(1),
-             ~mmu=m,
-           );
+        newState(
+          ~cpu=
+            cpu |> setRegisters(~h) |> machineCycles(2) |> incrementPc(1),
+          ~mmu=m,
+          s,
+        );
       };
     let ld_l_n: op =
       ({mmu, gpu, cpu} as s) => {
         let pc = programCount(cpu);
         let (l, m) = Mmu.read8(pc, {gpu, mmu});
-        s
-        |> newState(
-             ~cpu=
-               cpu |> setRegisters(~l) |> machineCycles(2) |> incrementPc(1),
-             ~mmu=m,
-           );
+        newState(
+          ~cpu=
+            cpu |> setRegisters(~l) |> machineCycles(2) |> incrementPc(1),
+          ~mmu=m,
+          s,
+        );
       };
   };
 
@@ -349,236 +349,236 @@ module Ops = {
     let ld_b_b: op =
       ({cpu} as s) => {
         let {b} = cpu.registers;
-        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~b));
+        newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~b), s);
       };
     let ld_b_c: op =
       ({cpu} as s) => {
         let {c} = cpu.registers;
-        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~b=c));
+        newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~b=c), s);
       };
     let ld_b_d: op =
       ({cpu} as s) => {
         let {d} = cpu.registers;
-        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~b=d));
+        newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~b=d), s);
       };
     let ld_b_e: op =
       ({cpu} as s) => {
         let {e} = cpu.registers;
-        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~b=e));
+        newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~b=e), s);
       };
     let ld_b_h: op =
       ({cpu} as s) => {
         let {h} = cpu.registers;
-        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~b=h));
+        newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~b=h), s);
       };
     let ld_b_l: op =
       ({cpu} as s) => {
         let {l} = cpu.registers;
-        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~b=l));
+        newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~b=l), s);
       };
     let ld_b_m_hl: op =
       ({cpu, mmu, gpu} as s) => {
         let (hl, mmu) = Mmu.read8(rHl(cpu), {mmu, gpu});
-        s
-        |> newState(
-             ~cpu=cpu |> machineCycles(2) |> setRegisters(~b=hl),
-             ~mmu,
-           );
+        newState(
+          ~cpu=cpu |> machineCycles(2) |> setRegisters(~b=hl),
+          ~mmu,
+          s,
+        );
       };
     let ld_c_b: op =
       ({cpu} as s) => {
         let {b} = cpu.registers;
-        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~c=b));
+        newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~c=b), s);
       };
     let ld_c_c: op =
       ({cpu} as s) => {
         let {c} = cpu.registers;
-        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~c));
+        newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~c), s);
       };
     let ld_c_d: op =
       ({cpu} as s) => {
         let {d} = cpu.registers;
-        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~c=d));
+        newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~c=d), s);
       };
     let ld_c_e: op =
       ({cpu} as s) => {
         let {e} = cpu.registers;
-        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~c=e));
+        newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~c=e), s);
       };
     let ld_c_h: op =
       ({cpu} as s) => {
         let {h} = cpu.registers;
-        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~c=h));
+        newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~c=h), s);
       };
     let ld_c_l: op =
       ({cpu} as s) => {
         let {l} = cpu.registers;
-        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~c=l));
+        newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~c=l), s);
       };
     let ld_c_m_hl: op =
       ({cpu, mmu, gpu} as s) => {
         let (hl, mmu) = Mmu.read8(rHl(cpu), {mmu, gpu});
-        s
-        |> newState(
-             ~cpu=cpu |> machineCycles(2) |> setRegisters(~c=hl),
-             ~mmu,
-           );
+        newState(
+          ~cpu=cpu |> machineCycles(2) |> setRegisters(~c=hl),
+          ~mmu,
+          s,
+        );
       };
     let ld_d_b: op =
       ({cpu} as s) => {
         let {b} = cpu.registers;
-        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~d=b));
+        newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~d=b), s);
       };
     let ld_d_c: op =
       ({cpu} as s) => {
         let {c} = cpu.registers;
-        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~d=c));
+        newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~d=c), s);
       };
     let ld_d_d: op =
       ({cpu} as s) => {
         let {d} = cpu.registers;
-        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~d));
+        newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~d), s);
       };
     let ld_d_e: op =
       ({cpu} as s) => {
         let {e} = cpu.registers;
-        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~d=e));
+        newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~d=e), s);
       };
     let ld_d_h: op =
       ({cpu} as s) => {
         let {h} = cpu.registers;
-        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~d=h));
+        newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~d=h), s);
       };
     let ld_d_l: op =
       ({cpu} as s) => {
         let {l} = cpu.registers;
-        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~d=l));
+        newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~d=l), s);
       };
     let ld_d_m_hl: op =
       ({cpu, mmu, gpu} as s) => {
         let (hl, mmu) = Mmu.read8(rHl(cpu), {mmu, gpu});
-        s
-        |> newState(
-             ~cpu=cpu |> machineCycles(2) |> setRegisters(~d=hl),
-             ~mmu,
-           );
+        newState(
+          ~cpu=cpu |> machineCycles(2) |> setRegisters(~d=hl),
+          ~mmu,
+          s,
+        );
       };
     let ld_e_b: op =
       ({cpu} as s) => {
         let {b} = cpu.registers;
-        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~e=b));
+        newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~e=b), s);
       };
     let ld_e_c: op =
       ({cpu} as s) => {
         let {c} = cpu.registers;
-        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~e=c));
+        newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~e=c), s);
       };
     let ld_e_d: op =
       ({cpu} as s) => {
         let {d} = cpu.registers;
-        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~e=d));
+        newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~e=d), s);
       };
     let ld_e_e: op =
       ({cpu} as s) => {
         let {e} = cpu.registers;
-        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~e));
+        newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~e), s);
       };
     let ld_e_h: op =
       ({cpu} as s) => {
         let {h} = cpu.registers;
-        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~e=h));
+        newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~e=h), s);
       };
     let ld_e_l: op =
       ({cpu} as s) => {
         let {l} = cpu.registers;
-        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~e=l));
+        newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~e=l), s);
       };
     let ld_e_m_hl: op =
       ({cpu, mmu, gpu} as s) => {
         let (hl, mmu) = Mmu.read8(rHl(cpu), {mmu, gpu});
-        s
-        |> newState(
-             ~cpu=cpu |> machineCycles(2) |> setRegisters(~e=hl),
-             ~mmu,
-           );
+        newState(
+          ~cpu=cpu |> machineCycles(2) |> setRegisters(~e=hl),
+          ~mmu,
+          s,
+        );
       };
     let ld_h_b: op =
       ({cpu} as s) => {
         let {b} = cpu.registers;
-        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~h=b));
+        newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~h=b), s);
       };
     let ld_h_c: op =
       ({cpu} as s) => {
         let {c} = cpu.registers;
-        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~h=c));
+        newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~h=c), s);
       };
     let ld_h_d: op =
       ({cpu} as s) => {
         let {d} = cpu.registers;
-        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~h=d));
+        newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~h=d), s);
       };
     let ld_h_e: op =
       ({cpu} as s) => {
         let {e} = cpu.registers;
-        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~h=e));
+        newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~h=e), s);
       };
     let ld_h_h: op =
       ({cpu} as s) => {
         let {h} = cpu.registers;
-        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~h));
+        newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~h), s);
       };
     let ld_h_l: op =
       ({cpu} as s) => {
         let {l} = cpu.registers;
-        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~h=l));
+        newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~h=l), s);
       };
     let ld_h_m_hl: op =
       ({cpu, mmu, gpu} as s) => {
         let (hl, mmu) = Mmu.read8(rHl(cpu), {mmu, gpu});
-        s
-        |> newState(
-             ~cpu=cpu |> machineCycles(2) |> setRegisters(~h=hl),
-             ~mmu,
-           );
+        newState(
+          ~cpu=cpu |> machineCycles(2) |> setRegisters(~h=hl),
+          ~mmu,
+          s,
+        );
       };
     let ld_l_b: op =
       ({cpu} as s) => {
         let {b} = cpu.registers;
-        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~l=b));
+        newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~l=b), s);
       };
     let ld_l_c: op =
       ({cpu} as s) => {
         let {c} = cpu.registers;
-        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~l=c));
+        newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~l=c), s);
       };
     let ld_l_d: op =
       ({cpu} as s) => {
         let {d} = cpu.registers;
-        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~l=d));
+        newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~l=d), s);
       };
     let ld_l_e: op =
       ({cpu} as s) => {
         let {e} = cpu.registers;
-        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~l=e));
+        newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~l=e), s);
       };
     let ld_l_h: op =
       ({cpu} as s) => {
         let {h} = cpu.registers;
-        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~l=h));
+        newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~l=h), s);
       };
     let ld_l_l: op =
       ({cpu} as s) => {
         let {l} = cpu.registers;
-        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~l));
+        newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~l), s);
       };
     let ld_l_m_hl: op =
       ({cpu, mmu, gpu} as s) => {
         let (hl, mmu) = Mmu.read8(rHl(cpu), {mmu, gpu});
-        s
-        |> newState(
-             ~cpu=cpu |> machineCycles(2) |> setRegisters(~l=hl),
-             ~mmu,
-           );
+        newState(
+          ~cpu=cpu |> machineCycles(2) |> setRegisters(~l=hl),
+          ~mmu,
+          s,
+        );
       };
     let ld_m_hl_8 = (register: int, {cpu, mmu, gpu}) => {
       let (mmu, gpu) = Mmu.write8(rHl(cpu), register, {mmu, gpu});
@@ -587,43 +587,43 @@ module Ops = {
     let ld_m_hl_b: op =
       ({cpu} as s) => {
         let (cpu, mmu, gpu) = ld_m_hl_8(cpu.registers.b, s);
-        s |> newState(~cpu, ~mmu, ~gpu);
+        newState(~cpu, ~mmu, ~gpu, s);
       };
     let ld_m_hl_c: op =
       ({cpu} as s) => {
         let (cpu, mmu, gpu) = ld_m_hl_8(cpu.registers.c, s);
-        s |> newState(~cpu, ~mmu, ~gpu);
+        newState(~cpu, ~mmu, ~gpu, s);
       };
     let ld_m_hl_d: op =
       ({cpu} as s) => {
         let (cpu, mmu, gpu) = ld_m_hl_8(cpu.registers.d, s);
-        s |> newState(~cpu, ~mmu, ~gpu);
+        newState(~cpu, ~mmu, ~gpu, s);
       };
     let ld_m_hl_e: op =
       ({cpu} as s) => {
         let (cpu, mmu, gpu) = ld_m_hl_8(cpu.registers.e, s);
-        s |> newState(~cpu, ~mmu, ~gpu);
+        newState(~cpu, ~mmu, ~gpu, s);
       };
     let ld_m_hl_h: op =
       ({cpu} as s) => {
         let (cpu, mmu, gpu) = ld_m_hl_8(cpu.registers.h, s);
-        s |> newState(~cpu, ~mmu, ~gpu);
+        newState(~cpu, ~mmu, ~gpu, s);
       };
     let ld_m_hl_l: op =
       ({cpu} as s) => {
         let (cpu, mmu, gpu) = ld_m_hl_8(cpu.registers.l, s);
-        s |> newState(~cpu, ~mmu, ~gpu);
+        newState(~cpu, ~mmu, ~gpu, s);
       };
     let ld_m_hl_n: op =
       ({cpu, mmu, gpu} as s) => {
         let (n, mmu) = Mmu.read8(programCount(cpu), {mmu, gpu});
         let (mmu, gpu) = Mmu.write8(rHl(cpu), n, {mmu, gpu});
-        s
-        |> newState(
-             ~cpu=cpu |> machineCycles(3) |> incrementPc(1),
-             ~mmu,
-             ~gpu,
-           );
+        newState(
+          ~cpu=cpu |> machineCycles(3) |> incrementPc(1),
+          ~mmu,
+          ~gpu,
+          s,
+        );
       };
   };
 
@@ -639,48 +639,48 @@ module Ops = {
     let ld_bc_nn: op =
       s => {
         let (b, c, m, cpu) = ld_n_nn(s);
-        s |> newState(~cpu=cpu |> setRegisters(~b, ~c), ~mmu=m);
+        newState(~cpu=cpu |> setRegisters(~b, ~c), ~mmu=m, s);
       };
     let ld_de_nn: op =
       s => {
         let (d, e, m, cpu) = ld_n_nn(s);
-        s |> newState(~cpu=cpu |> setRegisters(~d, ~e), ~mmu=m);
+        newState(~cpu=cpu |> setRegisters(~d, ~e), ~mmu=m, s);
       };
     let ld_hl_nn: op =
       s => {
         let (h, l, m, cpu) = ld_n_nn(s);
-        s |> newState(~cpu=cpu |> setRegisters(~h, ~l), ~mmu=m);
+        newState(~cpu=cpu |> setRegisters(~h, ~l), ~mmu=m, s);
       };
     let ld_sp_nn: op =
       ({cpu, mmu, gpu} as s) => {
         let (sp, mmu) = Mmu.read16(programCount(cpu), {gpu, mmu});
-        s
-        |> newState(
-             ~cpu=cpu |> setSp(sp) |> machineCycles(3) |> incrementPc(2),
-             ~mmu,
-           );
+        newState(
+          ~cpu=cpu |> setSp(sp) |> machineCycles(3) |> incrementPc(2),
+          ~mmu,
+          s,
+        );
       };
     let ld_sp_hl: op =
       ({cpu} as s) => {
         let hl = rHl(cpu);
-        s |> newState(~cpu=cpu |> setSp(hl) |> machineCycles(2));
+        newState(~cpu=cpu |> setSp(hl) |> machineCycles(2), s);
       };
     let ld_hl_sp_n: op =
       ({cpu, mmu, gpu} as s) => {
         // TODO: set flags H and C
         let (n, mmu) = Mmu.read8(programCount(cpu), {mmu, gpu});
         let n = signed(n) + cpu.registers.sp;
-        s
-        |> newState(
-             ~cpu=
-               cpu
-               |> wHl(n)
-               |> setFlag(Z, 0)
-               |> setFlag(N, 0)
-               |> machineCycles(3)
-               |> incrementPc(1),
-             ~mmu,
-           );
+        newState(
+          ~cpu=
+            cpu
+            |> wHl(n)
+            |> setFlag(Z, 0)
+            |> setFlag(N, 0)
+            |> machineCycles(3)
+            |> incrementPc(1),
+          ~mmu,
+          s,
+        );
       };
     /* 08: LD (a16),SP */
     let ld_m_nn_sp: op =
@@ -688,7 +688,7 @@ module Ops = {
         let pc = programCount(cpu);
         let (addr, mmu) = Mmu.read16(pc, {mmu, gpu});
         let (mmu, gpu) = Mmu.write16(addr, cpu.registers.sp, {mmu, gpu});
-        s |> newState(~cpu=cpu |> cycles(20) |> incrementPc(2), ~mmu, ~gpu);
+        newState(~cpu=cpu |> cycles(20) |> incrementPc(2), ~mmu, ~gpu, s);
       };
   };
 
@@ -698,99 +698,97 @@ module Ops = {
       ({mmu, gpu, cpu} as s) => {
         let {a} = cpu.registers;
         let (mmuWrite, gpu) = Mmu.write8(rBc(cpu), a, {mmu, gpu});
-        s |> newState(~cpu=cpu |> machineCycles(2), ~mmu=mmuWrite, ~gpu);
+        newState(~cpu=cpu |> machineCycles(2), ~mmu=mmuWrite, ~gpu, s);
       };
     let ld_m_de_a: op =
       ({mmu, gpu, cpu} as s) => {
         let {a} = cpu.registers;
         let (mmuWrite, gpu) = Mmu.write8(rDe(cpu), a, {mmu, gpu});
-        s |> newState(~cpu=cpu |> machineCycles(2), ~mmu=mmuWrite, ~gpu);
+        newState(~cpu=cpu |> machineCycles(2), ~mmu=mmuWrite, ~gpu, s);
       };
     let ld_m_hl_a: op =
       ({mmu, gpu, cpu} as s) => {
         let {a} = cpu.registers;
         let (mmuWrite, gpu) = Mmu.write8(rHl(cpu), a, {mmu, gpu});
-        s |> newState(~cpu=cpu |> machineCycles(2), ~mmu=mmuWrite, ~gpu);
+        newState(~cpu=cpu |> machineCycles(2), ~mmu=mmuWrite, ~gpu, s);
       };
     let ld_m_nn_a: op =
       ({mmu, gpu, cpu} as s) => {
         let {a} = cpu.registers;
         let (addr, mmu) = Mmu.read16(programCount(cpu), {mmu, gpu});
         let (mmuWrite, gpu) = Mmu.write8(addr, a, {mmu, gpu});
-        s
-        |> newState(
-             ~cpu=cpu |> machineCycles(4) |> incrementPc(2),
-             ~mmu=mmuWrite,
-             ~gpu,
-           );
+        newState(
+          ~cpu=cpu |> machineCycles(4) |> incrementPc(2),
+          ~mmu=mmuWrite,
+          ~gpu,
+          s,
+        );
       };
     let ld_a_a: op =
       ({cpu} as s) => {
         let {a} = cpu.registers;
-        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~a));
+        newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~a), s);
       };
     let ld_b_a: op =
       ({cpu} as s) => {
         let {a} = cpu.registers;
-        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~b=a));
+        newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~b=a), s);
       };
     let ld_c_a: op =
       ({cpu} as s) => {
         let {a} = cpu.registers;
-        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~c=a));
+        newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~c=a), s);
       };
     let ld_d_a: op =
       ({cpu} as s) => {
         let {a} = cpu.registers;
-        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~d=a));
+        newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~d=a), s);
       };
     let ld_e_a: op =
       ({cpu} as s) => {
         let {a} = cpu.registers;
-        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~e=a));
+        newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~e=a), s);
       };
     let ld_h_a: op =
       ({cpu} as s) => {
         let {a} = cpu.registers;
-        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~h=a));
+        newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~h=a), s);
       };
     let ld_l_a: op =
       ({cpu} as s) => {
         let {a} = cpu.registers;
-        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~l=a));
+        newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~l=a), s);
       };
     let ld_m_c_a: op =
       ({cpu, mmu, gpu} as s) => {
         let {a, c} = cpu.registers;
         let addr = 0xff00 + c;
         let (mmu, gpu) = Mmu.write8(addr, a, {mmu, gpu});
-        s |> newState(~cpu=cpu |> machineCycles(2), ~mmu, ~gpu);
+        newState(~cpu=cpu |> machineCycles(2), ~mmu, ~gpu, s);
       };
     let ld_hld_a: op =
       ({cpu, mmu, gpu} as s) => {
         let {a} = cpu.registers;
         let (mmu, gpu) = Mmu.write8(rHl(cpu), a, {mmu, gpu});
-        s
-        |> newState(~cpu=cpu |> machineCycles(2) |> decrementHl, ~mmu, ~gpu);
+        newState(~cpu=cpu |> machineCycles(2) |> decrementHl, ~mmu, ~gpu, s);
       };
     let ld_hli_a: op =
       ({cpu, mmu, gpu} as s) => {
         let {a} = cpu.registers;
         let (mmu, gpu) = Mmu.write8(rHl(cpu), a, {mmu, gpu});
-        s
-        |> newState(~cpu=cpu |> machineCycles(2) |> incrementHl, ~mmu, ~gpu);
+        newState(~cpu=cpu |> machineCycles(2) |> incrementHl, ~mmu, ~gpu, s);
       };
     let ldh_n_a: op =
       ({cpu, mmu, gpu} as s) => {
         let (immediate, mmu) = Mmu.read8(programCount(cpu), {mmu, gpu});
         let addr = 0xff00 + immediate;
         let (mmu, gpu) = Mmu.write8(addr, cpu.registers.a, {mmu, gpu});
-        s
-        |> newState(
-             ~cpu=cpu |> incrementPc(1) |> machineCycles(3),
-             ~mmu,
-             ~gpu,
-           );
+        newState(
+          ~cpu=cpu |> incrementPc(1) |> machineCycles(3),
+          ~mmu,
+          ~gpu,
+          s,
+        );
       };
   };
 
@@ -798,126 +796,124 @@ module Ops = {
     let ld_a_b: op =
       ({cpu} as s) => {
         let {b} = cpu.registers;
-        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~a=b));
+        newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~a=b), s);
       };
     let ld_a_c: op =
       ({cpu} as s) => {
         let {c} = cpu.registers;
-        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~a=c));
+        newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~a=c), s);
       };
     let ld_a_d: op =
       ({cpu} as s) => {
         let {d} = cpu.registers;
-        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~a=d));
+        newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~a=d), s);
       };
     let ld_a_e: op =
       ({cpu} as s) => {
         let {e} = cpu.registers;
-        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~a=e));
+        newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~a=e), s);
       };
     let ld_a_h: op =
       ({cpu} as s) => {
         let {h} = cpu.registers;
-        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~a=h));
+        newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~a=h), s);
       };
     let ld_a_l: op =
       ({cpu} as s) => {
         let {l} = cpu.registers;
-        s |> newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~a=l));
+        newState(~cpu=cpu |> machineCycles(1) |> setRegisters(~a=l), s);
       };
     /* 0A: LD A,(BC) */
     let ld_a_m_bc: op =
       ({cpu, mmu, gpu} as s) => {
         let (bc, mmu) = Mmu.read8(rBc(cpu), {mmu, gpu});
-        s
-        |> newState(
-             ~cpu=cpu |> machineCycles(2) |> setRegisters(~a=bc),
-             ~mmu,
-           );
+        newState(
+          ~cpu=cpu |> machineCycles(2) |> setRegisters(~a=bc),
+          ~mmu,
+          s,
+        );
       };
     let ld_a_m_de: op =
       ({cpu, mmu, gpu} as s) => {
         let (de, mmu) = Mmu.read8(rDe(cpu), {mmu, gpu});
-        s
-        |> newState(
-             ~cpu=cpu |> machineCycles(2) |> setRegisters(~a=de),
-             ~mmu,
-           );
+        newState(
+          ~cpu=cpu |> machineCycles(2) |> setRegisters(~a=de),
+          ~mmu,
+          s,
+        );
       };
     let ld_a_m_hl: op =
       ({cpu, mmu, gpu} as s) => {
         let (hl, mmu) = Mmu.read8(rHl(cpu), {mmu, gpu});
-        s
-        |> newState(
-             ~cpu=cpu |> machineCycles(2) |> setRegisters(~a=hl),
-             ~mmu,
-           );
+        newState(
+          ~cpu=cpu |> machineCycles(2) |> setRegisters(~a=hl),
+          ~mmu,
+          s,
+        );
       };
     let ld_a_m_nn: op =
       ({cpu, mmu, gpu} as s) => {
         let (addr, mmu) = Mmu.read16(programCount(cpu), {mmu, gpu});
         let (a, mmu) = Mmu.read8(addr, {mmu, gpu});
-        s
-        |> newState(
-             ~cpu=
-               cpu |> machineCycles(4) |> incrementPc(2) |> setRegisters(~a),
-             ~mmu,
-           );
+        newState(
+          ~cpu=
+            cpu |> machineCycles(4) |> incrementPc(2) |> setRegisters(~a),
+          ~mmu,
+          s,
+        );
       };
     let ld_a_m_n: op =
       ({cpu, mmu, gpu} as s) => {
         let addr = programCount(cpu);
         let (a, mmu) = Mmu.read8(addr, {mmu, gpu});
-        s
-        |> newState(
-             ~cpu=
-               cpu |> machineCycles(2) |> incrementPc(1) |> setRegisters(~a),
-             ~mmu,
-           );
+        newState(
+          ~cpu=
+            cpu |> machineCycles(2) |> incrementPc(1) |> setRegisters(~a),
+          ~mmu,
+          s,
+        );
       };
     let ld_a_m_c: op =
       ({cpu, mmu, gpu} as s) => {
         let {c} = cpu.registers;
         let addr = 0xff00 + c;
         let (mc, mmu) = Mmu.read8(addr, {mmu, gpu});
-        s
-        |> newState(
-             ~cpu=cpu |> machineCycles(2) |> setRegisters(~a=mc),
-             ~mmu,
-           );
+        newState(
+          ~cpu=cpu |> machineCycles(2) |> setRegisters(~a=mc),
+          ~mmu,
+          s,
+        );
       };
     let ld_a_m_hld: op =
       ({cpu, mmu, gpu} as s) => {
         let (hl, mmu) = Mmu.read8(rHl(cpu), {mmu, gpu});
-        s
-        |> newState(
-             ~cpu=
-               cpu |> machineCycles(2) |> decrementHl |> setRegisters(~a=hl),
-             ~mmu,
-           );
+        newState(
+          ~cpu=cpu |> machineCycles(2) |> decrementHl |> setRegisters(~a=hl),
+          ~mmu,
+          s,
+        );
       };
     let ld_a_m_hli: op =
       ({cpu, mmu, gpu} as s) => {
         let (hl, mmu) = Mmu.read8(rHl(cpu), {mmu, gpu});
-        s
-        |> newState(
-             ~cpu=
-               cpu |> machineCycles(2) |> incrementHl |> setRegisters(~a=hl),
-             ~mmu,
-           );
+        newState(
+          ~cpu=cpu |> machineCycles(2) |> incrementHl |> setRegisters(~a=hl),
+          ~mmu,
+          s,
+        );
       };
     let ldh_a_n: op =
       ({cpu, mmu, gpu} as s) => {
         let (immediate, mmu) = Mmu.read8(programCount(cpu), {mmu, gpu});
         let addr = 0xff00 + immediate;
         let (a, mmu) = Mmu.read8(addr, {mmu, gpu});
-        s
-        |> newState(
-             ~cpu=
-               cpu |> setRegisters(~a) |> incrementPc(1) |> machineCycles(3),
-             ~mmu,
-             ~gpu,
-           );
+        newState(
+          ~cpu=
+            cpu |> setRegisters(~a) |> incrementPc(1) |> machineCycles(3),
+          ~mmu,
+          ~gpu,
+          s,
+        );
       };
   };
 
@@ -933,7 +929,7 @@ module Ops = {
           } else {
             cpu.registers.b;
           };
-        s |> newState(~cpu=cpu |> setRegisters(~b, ~c) |> machineCycles(2));
+        newState(~cpu=cpu |> setRegisters(~b, ~c) |> machineCycles(2), s);
       };
     let inc_de: op =
       ({cpu} as s) => {
@@ -944,15 +940,15 @@ module Ops = {
           } else {
             cpu.registers.d;
           };
-        s |> newState(~cpu=cpu |> setRegisters(~d, ~e) |> machineCycles(2));
+        newState(~cpu=cpu |> setRegisters(~d, ~e) |> machineCycles(2), s);
       };
     let inc_hl: op =
       ({cpu} as s) => {
-        s |> newState(~cpu=cpu |> incrementHl |> machineCycles(2));
+        newState(~cpu=cpu |> incrementHl |> machineCycles(2), s);
       };
     let inc_sp: op =
       ({cpu} as s) => {
-        s |> newState(~cpu=cpu |> incrementSp |> machineCycles(2));
+        newState(~cpu=cpu |> incrementSp |> machineCycles(2), s);
       };
   };
 
@@ -972,38 +968,38 @@ module Ops = {
     let inc_a: op =
       ({cpu} as s) => {
         let (a, cpu) = inc(cpu.registers.a, cpu);
-        s |> newState(~cpu=cpu |> setRegisters(~a));
+        newState(~cpu=cpu |> setRegisters(~a), s);
       };
     /* 04 */
     let inc_b: op =
       ({cpu} as s) => {
         let (b, cpu) = inc(cpu.registers.b, cpu);
-        s |> newState(~cpu=cpu |> setRegisters(~b));
+        newState(~cpu=cpu |> setRegisters(~b), s);
       };
     let inc_c: op =
       ({cpu} as s) => {
         let (c, cpu) = inc(cpu.registers.c, cpu);
-        s |> newState(~cpu=cpu |> setRegisters(~c));
+        newState(~cpu=cpu |> setRegisters(~c), s);
       };
     let inc_d: op =
       ({cpu} as s) => {
         let (d, cpu) = inc(cpu.registers.d, cpu);
-        s |> newState(~cpu=cpu |> setRegisters(~d));
+        newState(~cpu=cpu |> setRegisters(~d), s);
       };
     let inc_e: op =
       ({cpu} as s) => {
         let (e, cpu) = inc(cpu.registers.e, cpu);
-        s |> newState(~cpu=cpu |> setRegisters(~e));
+        newState(~cpu=cpu |> setRegisters(~e), s);
       };
     let inc_h: op =
       ({cpu} as s) => {
         let (h, cpu) = inc(cpu.registers.h, cpu);
-        s |> newState(~cpu=cpu |> setRegisters(~h));
+        newState(~cpu=cpu |> setRegisters(~h), s);
       };
     let inc_l: op =
       ({cpu} as s) => {
         let (l, cpu) = inc(cpu.registers.l, cpu);
-        s |> newState(~cpu=cpu |> setRegisters(~l));
+        newState(~cpu=cpu |> setRegisters(~l), s);
       };
   };
 
@@ -1023,38 +1019,38 @@ module Ops = {
     let dec_a: op =
       ({cpu} as s) => {
         let (a, cpu) = dec(cpu.registers.a, cpu);
-        s |> newState(~cpu=cpu |> setRegisters(~a));
+        newState(~cpu=cpu |> setRegisters(~a), s);
       };
     /* 05 */
     let dec_b: op =
       ({cpu} as s) => {
         let (b, cpu) = dec(cpu.registers.b, cpu);
-        s |> newState(~cpu=cpu |> setRegisters(~b));
+        newState(~cpu=cpu |> setRegisters(~b), s);
       };
     let dec_c: op =
       ({cpu} as s) => {
         let (c, cpu) = dec(cpu.registers.c, cpu);
-        s |> newState(~cpu=cpu |> setRegisters(~c));
+        newState(~cpu=cpu |> setRegisters(~c), s);
       };
     let dec_d: op =
       ({cpu} as s) => {
         let (d, cpu) = dec(cpu.registers.d, cpu);
-        s |> newState(~cpu=cpu |> setRegisters(~d));
+        newState(~cpu=cpu |> setRegisters(~d), s);
       };
     let dec_e: op =
       ({cpu} as s) => {
         let (e, cpu) = dec(cpu.registers.e, cpu);
-        s |> newState(~cpu=cpu |> setRegisters(~e));
+        newState(~cpu=cpu |> setRegisters(~e), s);
       };
     let dec_h: op =
       ({cpu} as s) => {
         let (h, cpu) = dec(cpu.registers.h, cpu);
-        s |> newState(~cpu=cpu |> setRegisters(~h));
+        newState(~cpu=cpu |> setRegisters(~h), s);
       };
     let dec_l: op =
       ({cpu} as s) => {
         let (l, cpu) = dec(cpu.registers.l, cpu);
-        s |> newState(~cpu=cpu |> setRegisters(~l));
+        newState(~cpu=cpu |> setRegisters(~l), s);
       };
     let dec_m_hl: op =
       ({cpu, mmu, gpu} as s) => {
@@ -1062,7 +1058,7 @@ module Ops = {
         let (hl, _) = Mmu.read8(addr, {mmu, gpu});
         let (hl', cpu) = dec(hl, ~cycles=3, cpu);
         let (mmu, gpu) = Mmu.write8(addr, hl', {mmu, gpu});
-        s |> newState(~cpu, ~mmu, ~gpu);
+        newState(~cpu, ~mmu, ~gpu, s);
       };
   };
 
@@ -1077,7 +1073,7 @@ module Ops = {
           } else {
             cpu.registers.b;
           };
-        s |> newState(~cpu=cpu |> setRegisters(~b, ~c) |> machineCycles(2));
+        newState(~cpu=cpu |> setRegisters(~b, ~c) |> machineCycles(2), s);
       };
     /* 1B: DEC DE */
     let dec_de: op =
@@ -1089,16 +1085,16 @@ module Ops = {
           } else {
             cpu.registers.d;
           };
-        s |> newState(~cpu=cpu |> setRegisters(~d, ~e) |> machineCycles(2));
+        newState(~cpu=cpu |> setRegisters(~d, ~e) |> machineCycles(2), s);
       };
     let dec_hl: op =
       ({cpu} as s) => {
         let cpu = decrementHl(cpu);
-        s |> newState(~cpu=cpu |> machineCycles(2));
+        newState(~cpu=cpu |> machineCycles(2), s);
       };
     let dec_sp: op =
       ({cpu} as s) => {
-        s |> newState(~cpu=cpu |> decrementSp |> machineCycles(2));
+        newState(~cpu=cpu |> decrementSp |> machineCycles(2), s);
       };
   };
 
@@ -1112,52 +1108,52 @@ module Ops = {
     let rlca: op =
       ({cpu} as s) => {
         let (a, cpu) = rlc(cpu, cpu.registers.a);
-        s |> newState(~cpu=cpu |> setRegisters(~a));
+        newState(~cpu=cpu |> setRegisters(~a), s);
       };
     let rlcb: op =
       ({cpu} as s) => {
         let (b, cpu) = rlc(cpu, ~mCycles=2, cpu.registers.b);
-        s |> newState(~cpu=cpu |> setRegisters(~b));
+        newState(~cpu=cpu |> setRegisters(~b), s);
       };
     let rlcc: op =
       ({cpu} as s) => {
         let (c, cpu) = rlc(cpu, ~mCycles=2, cpu.registers.c);
-        s |> newState(~cpu=cpu |> setRegisters(~c));
+        newState(~cpu=cpu |> setRegisters(~c), s);
       };
     let rlcd: op =
       ({cpu} as s) => {
         let (d, cpu) = rlc(cpu, ~mCycles=2, cpu.registers.d);
-        s |> newState(~cpu=cpu |> setRegisters(~d));
+        newState(~cpu=cpu |> setRegisters(~d), s);
       };
     let rlce: op =
       ({cpu} as s) => {
         let (e, cpu) = rlc(cpu, ~mCycles=2, cpu.registers.e);
-        s |> newState(~cpu=cpu |> setRegisters(~e));
+        newState(~cpu=cpu |> setRegisters(~e), s);
       };
     let rlch: op =
       ({cpu} as s) => {
         let (h, cpu) = rlc(cpu, ~mCycles=2, cpu.registers.h);
-        s |> newState(~cpu=cpu |> setRegisters(~h));
+        newState(~cpu=cpu |> setRegisters(~h), s);
       };
     let rlcl: op =
       ({cpu} as s) => {
         let (l, cpu) = rlc(cpu, ~mCycles=2, cpu.registers.l);
-        s |> newState(~cpu=cpu |> setRegisters(~l));
+        newState(~cpu=cpu |> setRegisters(~l), s);
       };
     /* 0F */
     let rrca: op =
       ({cpu} as s) => {
-        s |> newState(~cpu=cpu |> machineCycles(1));
+        newState(~cpu=cpu |> machineCycles(1), s);
       };
     /* 17 */
     let rla: op =
       ({cpu} as s) => {
-        s |> newState(~cpu=cpu |> machineCycles(1));
+        newState(~cpu=cpu |> machineCycles(1), s);
       };
     /* 1F */
     let rra: op =
       ({cpu} as s) => {
-        s |> newState(~cpu=cpu |> machineCycles(1));
+        newState(~cpu=cpu |> machineCycles(1), s);
       };
   };
 
@@ -1174,43 +1170,43 @@ module Ops = {
     let or_a: op =
       ({cpu} as s) => {
         let (a, cpu) = or_(cpu.registers.a, cpu);
-        s |> newState(~cpu=cpu |> setRegisters(~a));
+        newState(~cpu=cpu |> setRegisters(~a), s);
       };
     let or_b: op =
       ({cpu} as s) => {
         let (b, cpu) = or_(cpu.registers.b, cpu);
-        s |> newState(~cpu=cpu |> setRegisters(~b));
+        newState(~cpu=cpu |> setRegisters(~b), s);
       };
     let or_c: op =
       ({cpu} as s) => {
         let (c, cpu) = or_(cpu.registers.c, cpu);
-        s |> newState(~cpu=cpu |> setRegisters(~c));
+        newState(~cpu=cpu |> setRegisters(~c), s);
       };
     let or_d: op =
       ({cpu} as s) => {
         let (d, cpu) = or_(cpu.registers.d, cpu);
-        s |> newState(~cpu=cpu |> setRegisters(~d));
+        newState(~cpu=cpu |> setRegisters(~d), s);
       };
     let or_e: op =
       ({cpu} as s) => {
         let (e, cpu) = or_(cpu.registers.e, cpu);
-        s |> newState(~cpu=cpu |> setRegisters(~e));
+        newState(~cpu=cpu |> setRegisters(~e), s);
       };
     let or_h: op =
       ({cpu} as s) => {
         let (h, cpu) = or_(cpu.registers.h, cpu);
-        s |> newState(~cpu=cpu |> setRegisters(~h));
+        newState(~cpu=cpu |> setRegisters(~h), s);
       };
     let or_l: op =
       ({cpu} as s) => {
         let (l, cpu) = or_(cpu.registers.l, cpu);
-        s |> newState(~cpu=cpu |> setRegisters(~l));
+        newState(~cpu=cpu |> setRegisters(~l), s);
       };
     let or_m_hl: op =
       ({cpu, mmu, gpu} as s) => {
         let (hl, _) = Mmu.read8(rHl(cpu), {mmu, gpu});
         let (l, cpu) = or_(hl, ~cycles=2, cpu);
-        s |> newState(~cpu=cpu |> setRegisters(~l));
+        newState(~cpu=cpu |> setRegisters(~l), s);
       };
   };
 
@@ -1226,22 +1222,22 @@ module Ops = {
     let push_af: op =
       ({cpu} as s) => {
         let (cpu, mmu, gpu) = push(s, cpu.registers.a, cpu.registers.f);
-        s |> newState(~cpu, ~mmu, ~gpu);
+        newState(~cpu, ~mmu, ~gpu, s);
       };
     let push_bc: op =
       ({cpu} as s) => {
         let (cpu, mmu, gpu) = push(s, cpu.registers.b, cpu.registers.c);
-        s |> newState(~cpu, ~mmu, ~gpu);
+        newState(~cpu, ~mmu, ~gpu, s);
       };
     let push_de: op =
       ({cpu} as s) => {
         let (cpu, mmu, gpu) = push(s, cpu.registers.d, cpu.registers.e);
-        s |> newState(~cpu, ~mmu, ~gpu);
+        newState(~cpu, ~mmu, ~gpu, s);
       };
     let push_hl: op =
       ({cpu} as s) => {
         let (cpu, mmu, gpu) = push(s, cpu.registers.h, cpu.registers.l);
-        s |> newState(~cpu, ~mmu, ~gpu);
+        newState(~cpu, ~mmu, ~gpu, s);
       };
   };
 
@@ -1257,22 +1253,22 @@ module Ops = {
     let pop_af: op =
       s => {
         let (cpu, mmu, a, f) = pop(s);
-        s |> newState(~cpu=cpu |> setRegisters(~a, ~f), ~mmu);
+        newState(~cpu=cpu |> setRegisters(~a, ~f), ~mmu, s);
       };
     let pop_bc: op =
       s => {
         let (cpu, mmu, b, c) = pop(s);
-        s |> newState(~cpu=cpu |> setRegisters(~b, ~c), ~mmu);
+        newState(~cpu=cpu |> setRegisters(~b, ~c), ~mmu, s);
       };
     let pop_de: op =
       s => {
         let (cpu, mmu, d, e) = pop(s);
-        s |> newState(~cpu=cpu |> setRegisters(~d, ~e), ~mmu);
+        newState(~cpu=cpu |> setRegisters(~d, ~e), ~mmu, s);
       };
     let pop_hl: op =
       s => {
         let (cpu, mmu, h, l) = pop(s);
-        s |> newState(~cpu=cpu |> setRegisters(~h, ~l), ~mmu);
+        newState(~cpu=cpu |> setRegisters(~h, ~l), ~mmu, s);
       };
   };
 
@@ -1309,22 +1305,22 @@ module Ops = {
     let add_hl_bc: op =
       ({cpu} as s) => {
         let (cpu, h, l) = add_hl(cpu, rBc(cpu));
-        s |> newState(~cpu=cpu |> setRegisters(~h, ~l));
+        newState(~cpu=cpu |> setRegisters(~h, ~l), s);
       };
     let add_hl_de: op =
       ({cpu} as s) => {
         let (cpu, h, l) = add_hl(cpu, rDe(cpu));
-        s |> newState(~cpu=cpu |> setRegisters(~h, ~l));
+        newState(~cpu=cpu |> setRegisters(~h, ~l), s);
       };
     let add_hl_hl: op =
       ({cpu} as s) => {
         let (cpu, h, l) = add_hl(cpu, rHl(cpu));
-        s |> newState(~cpu=cpu |> setRegisters(~h, ~l));
+        newState(~cpu=cpu |> setRegisters(~h, ~l), s);
       };
     let add_hl_sp: op =
       ({cpu} as s) => {
         let (cpu, h, l) = add_hl(cpu, cpu.registers.sp);
-        s |> newState(~cpu=cpu |> setRegisters(~h, ~l));
+        newState(~cpu=cpu |> setRegisters(~h, ~l), s);
       };
     let add_sp_n: op =
       ({cpu, mmu, gpu} as s) => {
@@ -1376,7 +1372,7 @@ module Ops = {
           |> setFlag(C, 0)
           |> machineCycles(1);
 
-        s |> newState(~cpu);
+        newState(~cpu, s);
       };
     let cpl: op =
       ({cpu} as s) => {
@@ -1387,7 +1383,7 @@ module Ops = {
           |> setFlag(N, 1)
           |> setFlag(H, 1)
           |> machineCycles(1);
-        s |> newState(~cpu);
+        newState(~cpu, s);
       };
     let ccf: op =
       ({cpu} as s) => {
@@ -1416,7 +1412,7 @@ module Ops = {
     let halt: op =
       ({cpu} as s) => {
         cpu.halt = 1;
-        s |> newState(~cpu);
+        newState(~cpu, s);
       };
   };
 
@@ -1425,12 +1421,12 @@ module Ops = {
       ({cpu, mmu, gpu} as s) => {
         let (nn, mmu) = Mmu.read16(programCount(cpu), {mmu, gpu});
         cpu.registers.pc = nn;
-        s |> newState(~cpu=cpu |> machineCycles(3), ~mmu);
+        newState(~cpu=cpu |> machineCycles(3), ~mmu, s);
       };
     let jp_m_hl: op =
       ({cpu, mmu} as s) => {
         cpu.registers.pc = rHl(cpu);
-        s |> newState(~cpu=cpu |> machineCycles(4), ~mmu);
+        newState(~cpu=cpu |> machineCycles(4), ~mmu, s);
       };
     let jp_nz_nn: op =
       ({cpu, mmu, gpu} as s) => {
@@ -1445,7 +1441,7 @@ module Ops = {
           };
         cpu.registers.pc = pc;
 
-        s |> newState(~cpu=cpu |> machineCycles(mCycles), ~mmu);
+        newState(~cpu=cpu |> machineCycles(mCycles), ~mmu, s);
       };
     let jp_z_nn: op =
       ({cpu, mmu, gpu} as s) => {
@@ -1460,7 +1456,7 @@ module Ops = {
           };
         cpu.registers.pc = pc;
 
-        s |> newState(~cpu=cpu |> machineCycles(mCycles), ~mmu);
+        newState(~cpu=cpu |> machineCycles(mCycles), ~mmu, s);
       };
     let jp_nc_nn: op =
       ({cpu, mmu, gpu} as s) => {
@@ -1475,7 +1471,7 @@ module Ops = {
           };
         cpu.registers.pc = pc;
 
-        s |> newState(~cpu=cpu |> machineCycles(mCycles), ~mmu);
+        newState(~cpu=cpu |> machineCycles(mCycles), ~mmu, s);
       };
     let jp_c_nn: op =
       ({cpu, mmu, gpu} as s) => {
@@ -1490,7 +1486,7 @@ module Ops = {
           };
         cpu.registers.pc = pc;
 
-        s |> newState(~cpu=cpu |> machineCycles(mCycles), ~mmu);
+        newState(~cpu=cpu |> machineCycles(mCycles), ~mmu, s);
       };
     let jr_n: op =
       ({cpu, mmu, gpu} as s) => {
@@ -1579,7 +1575,7 @@ module Ops = {
       ({cpu} as s) => {
         let (pc, mmu) = call(s);
         let cpu = cpu |> setPc(pc) |> machineCycles(4);
-        s |> newState(~cpu, ~mmu);
+        newState(~cpu, ~mmu, s);
       };
     let call_nz_nn: op =
       ({cpu, mmu} as s) => {
@@ -1592,18 +1588,23 @@ module Ops = {
           } else {
             (pc + 2, mmu, 0);
           };
-        s |> newState(~cpu=cpu |> setPc(pc) |> machineCycles(mCycles), ~mmu);
+        newState(~cpu=cpu |> setPc(pc) |> machineCycles(mCycles), ~mmu, s);
       };
   };
 
   module Swap = {};
 
   module Cb = {
-    let cb: op =
+    let cb_exec: op =
       ({cpu, mmu, gpu} as s) => {
-        let (nextInstr, mmu) = Mmu.read8(programCount(cpu), {mmu, gpu});
-
-        s |> newState(~cpu=cpu |> incrementPc(1), ~mmu);
+        let pc = programCount(cpu);
+        let (nextInstr, mmu) = Mmu.read8(pc, {mmu, gpu});
+        let cpu = cpu |> setPc(pc + 1);
+        let s =
+          switch (nextInstr) {
+          | _ => newState(~cpu, ~mmu, s)
+          };
+        s;
       };
   };
 };
@@ -1814,7 +1815,7 @@ let exec: int => Ops.op =
     | 0xC8 => Ops.nop
     | 0xC9 => Ops.nop
     | 0xCA => Ops.Jump.jp_z_nn
-    | 0xCB => Ops.Cb.cb
+    | 0xCB => Ops.Cb.cb_exec
     | 0xCC => Ops.nop
     | 0xCD => Ops.Call.call_nn
     | 0xCE => Ops.nop
