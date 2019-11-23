@@ -24,6 +24,15 @@ module Flags = {
     | _ => flags lor bit
     };
   };
+  let getFlag = (flag, flags) => {
+    let offset = flagOffset(flag);
+    let flag = flags land 1 lsl offset;
+    flag lsr offset;
+  };
+  let isSet = (flag, flags) => {
+    let offset = flagOffset(flag);
+    flags land 1 lsl offset > 0;
+  };
 };
 
 type register8 =
@@ -58,11 +67,13 @@ type registers = {
 
 type t = {
   mutable clock: int,
+  mutable halt: int,
   registers,
 };
 
 let make = () => {
   clock: 0,
+  halt: 0,
   registers: {
     a: 0,
     b: 0,
@@ -104,43 +115,6 @@ let rDe = readRegister16(DE);
 
 let rHl = readRegister16(HL);
 
-/**
- * Increment Program Counter
- */
-let incrementPc = (cycles, cpu) => {
-  cpu.registers.pc = cpu.registers.pc + cycles;
-  cpu;
-};
-
-let incrementSp = (cpu: t) => {
-  cpu.registers.sp = (cpu.registers.sp + 1) land 0xffff;
-  cpu;
-};
-
-let decrementSp = (cpu: t) => {
-  cpu.registers.sp = (cpu.registers.sp - 1) land 0xffff;
-  cpu;
-};
-
-/**
- * Returns a byte with only the appropriate flag value set (or not)
- */
-let getFlag = (flag, cpu) => {
-  let bit = 1 lsl Flags.flagOffset(flag);
-  cpu.registers.f land bit;
-};
-
-let setFlag = (flag, value, ~initialValue=?, cpu) => {
-  open Belt;
-  cpu.registers.f =
-    Flags.setFlag(
-      flag,
-      value,
-      Option.getWithDefault(initialValue, cpu.registers.f),
-    );
-  cpu;
-};
-
 let checkRegister = register =>
   if (register > 0xff) {
     raise(AssertionException(string_of_int(register)));
@@ -169,6 +143,89 @@ let setRegisters = (~a=?, ~b=?, ~c=?, ~d=?, ~e=?, ~h=?, ~l=?, ~f=?, cpu) => {
   cpu;
 };
 
+let writeRegister16 = (register: register16, value: int, cpu: t) => {
+  if (value > 0xffff) {
+    raise(AssertionException(Printf.sprintf("writeRegister16 %d", value)));
+  };
+
+  let r1 = value lsr 8 land 0xff;
+  let r2 = value land 0xff;
+  switch (register) {
+  | AF =>
+    let (a, f) = (r1, r2);
+    cpu |> setRegisters(~a, ~f);
+  | BC =>
+    let (b, c) = (r1, r2);
+    cpu |> setRegisters(~b, ~c);
+  | DE =>
+    let (d, e) = (r1, r2);
+    cpu |> setRegisters(~d, ~e);
+  | HL =>
+    let (h, l) = (r1, r2);
+    cpu |> setRegisters(~h, ~l);
+  };
+};
+
+let wHl = writeRegister16(HL);
+
+/**
+ * Increment Program Counter
+ */
+let incrementPc = (cycles, cpu) => {
+  cpu.registers.pc = cpu.registers.pc + cycles;
+  cpu;
+};
+
+let setPc = (pc, cpu) => {
+  cpu.registers.pc = pc;
+  cpu;
+};
+
+let incrementSp = (~amount=1, cpu: t) => {
+  cpu.registers.sp = (cpu.registers.sp + amount) land 0xffff;
+  cpu;
+};
+
+let decrementSp = (~amount=1, cpu: t) => {
+  cpu.registers.sp = (cpu.registers.sp - amount) land 0xffff;
+  cpu;
+};
+
+let setSp = (sp: int, cpu: t) => {
+  cpu.registers.sp = sp land 0xffff;
+  cpu;
+};
+
+/**j
+ * Returns a byte with only the appropriate flag value set (or not)
+ */
+let getFlag = (flag, cpu) => {
+  let bit = 1 lsl Flags.flagOffset(flag);
+  cpu.registers.f land bit;
+};
+
+let setFlag = (flag, value, ~initialValue=?, cpu) => {
+  open Belt;
+  cpu.registers.f =
+    Flags.setFlag(
+      flag,
+      value,
+      Option.getWithDefault(initialValue, cpu.registers.f),
+    );
+  cpu;
+};
+
+let toggleFlag = (flag, cpu) => {
+  let flagValue =
+    if (Flags.getFlag(flag, cpu.registers.f) === 0) {
+      1;
+    } else {
+      0;
+    };
+  let f = Flags.setFlag(flag, flagValue, cpu.registers.f);
+  cpu |> setRegisters(~f);
+};
+
 let machineCycles = (cycles: int, cpu: t) => {
   cpu.registers.mCycles = cycles;
   cpu;
@@ -177,6 +234,31 @@ let machineCycles = (cycles: int, cpu: t) => {
 let cycles = (cycles: int, cpu: t) =>
   /* 1 cycle = 4 machine cycles */
   cpu |> machineCycles(cycles / 4);
+
+let incrementHl = (cpu: t) => {
+  let l = (cpu.registers.l + 1) land 0xff; /* wrap after 255, i.e. 256 = 0 */
+  let h =
+    if (l === 0) {
+      (cpu.registers.h + 1) land 0xff;
+    } else {
+      cpu.registers.h;
+    };
+  cpu |> setRegisters(~h, ~l);
+};
+
+let decrementHl = (cpu: t) => {
+  let l = (cpu.registers.l - 1) land 0xff; /* wrap after 255, i.e. 256 = 0 */
+  let h =
+    if (l === 255) {
+      (cpu.registers.h - 1) land 0xff;
+    } else {
+      cpu.registers.h;
+    };
+  cpu |> setRegisters(~h, ~l);
+};
+
+let signed = (value: int): int =>
+  value > 127 ? - ((lnot(value) + 1) land 0xff) : value;
 
 module Ops = {
   type state = {
@@ -545,13 +627,13 @@ module Ops = {
       };
   };
 
-  module Load_16_8 = {
+  module Load_nn_16 = {
     let ld_n_nn = ({cpu, gpu, mmu}) => {
       let pc = programCount(cpu);
-      let (c, m) = Mmu.read8(pc, {gpu, mmu});
-      let (b, m) = Mmu.read8(pc + 1, {gpu, mmu: m});
+      let (b2, m) = Mmu.read8(pc, {gpu, mmu});
+      let (b1, m) = Mmu.read8(pc + 1, {gpu, mmu: m});
 
-      (b, c, m, cpu |> machineCycles(3) |> incrementPc(2));
+      (b1, b2, m, cpu |> machineCycles(3) |> incrementPc(2));
     };
     /* 01 */
     let ld_bc_nn: op =
@@ -568,6 +650,45 @@ module Ops = {
       s => {
         let (h, l, m, cpu) = ld_n_nn(s);
         s |> newState(~cpu=cpu |> setRegisters(~h, ~l), ~mmu=m);
+      };
+    let ld_sp_nn: op =
+      ({cpu, mmu, gpu} as s) => {
+        let (sp, mmu) = Mmu.read16(programCount(cpu), {gpu, mmu});
+        s
+        |> newState(
+             ~cpu=cpu |> setSp(sp) |> machineCycles(3) |> incrementPc(2),
+             ~mmu,
+           );
+      };
+    let ld_sp_hl: op =
+      ({cpu} as s) => {
+        let hl = rHl(cpu);
+        s |> newState(~cpu=cpu |> setSp(hl) |> machineCycles(2));
+      };
+    let ld_hl_sp_n: op =
+      ({cpu, mmu, gpu} as s) => {
+        // TODO: set flags H and C
+        let (n, mmu) = Mmu.read8(programCount(cpu), {mmu, gpu});
+        let n = signed(n) + cpu.registers.sp;
+        s
+        |> newState(
+             ~cpu=
+               cpu
+               |> wHl(n)
+               |> setFlag(Z, 0)
+               |> setFlag(N, 0)
+               |> machineCycles(3)
+               |> incrementPc(1),
+             ~mmu,
+           );
+      };
+    /* 08: LD (a16),SP */
+    let ld_m_nn_sp: op =
+      ({mmu, cpu, gpu} as s) => {
+        let pc = programCount(cpu);
+        let (addr, mmu) = Mmu.read16(pc, {mmu, gpu});
+        let (mmu, gpu) = Mmu.write16(addr, cpu.registers.sp, {mmu, gpu});
+        s |> newState(~cpu=cpu |> cycles(20) |> incrementPc(2), ~mmu, ~gpu);
       };
   };
 
@@ -644,6 +765,32 @@ module Ops = {
         let addr = 0xff00 + c;
         let (mmu, gpu) = Mmu.write8(addr, a, {mmu, gpu});
         s |> newState(~cpu=cpu |> machineCycles(2), ~mmu, ~gpu);
+      };
+    let ld_hld_a: op =
+      ({cpu, mmu, gpu} as s) => {
+        let {a} = cpu.registers;
+        let (mmu, gpu) = Mmu.write8(rHl(cpu), a, {mmu, gpu});
+        s
+        |> newState(~cpu=cpu |> machineCycles(2) |> decrementHl, ~mmu, ~gpu);
+      };
+    let ld_hli_a: op =
+      ({cpu, mmu, gpu} as s) => {
+        let {a} = cpu.registers;
+        let (mmu, gpu) = Mmu.write8(rHl(cpu), a, {mmu, gpu});
+        s
+        |> newState(~cpu=cpu |> machineCycles(2) |> incrementHl, ~mmu, ~gpu);
+      };
+    let ldh_n_a: op =
+      ({cpu, mmu, gpu} as s) => {
+        let (immediate, mmu) = Mmu.read8(programCount(cpu), {mmu, gpu});
+        let addr = 0xff00 + immediate;
+        let (mmu, gpu) = Mmu.write8(addr, cpu.registers.a, {mmu, gpu});
+        s
+        |> newState(
+             ~cpu=cpu |> incrementPc(1) |> machineCycles(3),
+             ~mmu,
+             ~gpu,
+           );
       };
   };
 
@@ -739,6 +886,39 @@ module Ops = {
              ~mmu,
            );
       };
+    let ld_a_m_hld: op =
+      ({cpu, mmu, gpu} as s) => {
+        let (hl, mmu) = Mmu.read8(rHl(cpu), {mmu, gpu});
+        s
+        |> newState(
+             ~cpu=
+               cpu |> machineCycles(2) |> decrementHl |> setRegisters(~a=hl),
+             ~mmu,
+           );
+      };
+    let ld_a_m_hli: op =
+      ({cpu, mmu, gpu} as s) => {
+        let (hl, mmu) = Mmu.read8(rHl(cpu), {mmu, gpu});
+        s
+        |> newState(
+             ~cpu=
+               cpu |> machineCycles(2) |> incrementHl |> setRegisters(~a=hl),
+             ~mmu,
+           );
+      };
+    let ldh_a_n: op =
+      ({cpu, mmu, gpu} as s) => {
+        let (immediate, mmu) = Mmu.read8(programCount(cpu), {mmu, gpu});
+        let addr = 0xff00 + immediate;
+        let (a, mmu) = Mmu.read8(addr, {mmu, gpu});
+        s
+        |> newState(
+             ~cpu=
+               cpu |> setRegisters(~a) |> incrementPc(1) |> machineCycles(3),
+             ~mmu,
+             ~gpu,
+           );
+      };
   };
 
   module Increment16 = {
@@ -768,14 +948,7 @@ module Ops = {
       };
     let inc_hl: op =
       ({cpu} as s) => {
-        let l = (cpu.registers.l + 1) land 0xff; /* wrap after 255, i.e. 256 = 0 */
-        let h =
-          if (l === 0) {
-            (cpu.registers.h + 1) land 0xff;
-          } else {
-            cpu.registers.h;
-          };
-        s |> newState(~cpu=cpu |> setRegisters(~h, ~l) |> machineCycles(2));
+        s |> newState(~cpu=cpu |> incrementHl |> machineCycles(2));
       };
     let inc_sp: op =
       ({cpu} as s) => {
@@ -893,31 +1066,6 @@ module Ops = {
       };
   };
 
-  /* 08: LD (a16),SP */
-  let ld_m_nn_sp: op =
-    ({mmu, cpu, gpu} as s) => {
-      let pc = programCount(cpu);
-      let (addr, mmu) = Mmu.read16(pc, {mmu, gpu});
-      let (mmu, gpu) = Mmu.write16(addr, cpu.registers.sp, {mmu, gpu});
-      s |> newState(~cpu=cpu |> cycles(20) |> incrementPc(2), ~mmu, ~gpu);
-    };
-  /* 09: ADD HL,BC */
-  let add_hl_bc: op =
-    ({cpu} as s) => {
-      let hl = rHl(cpu) + rBc(cpu);
-      let h = hl lsr 8 land 255;
-      let l = hl land 255;
-      let carry = hl > 0xffff;
-      s
-      |> newState(
-           ~cpu=
-             cpu
-             |> setRegisters(~h, ~l)
-             |> setFlag(Flags.C, b2i(carry))
-             |> machineCycles(2),
-         );
-    };
-
   module Decrement16 = {
     /* 0B: DEC (BC) */
     let dec_bc: op =
@@ -945,14 +1093,8 @@ module Ops = {
       };
     let dec_hl: op =
       ({cpu} as s) => {
-        let l = (cpu.registers.l - 1) land 0xff; /* wrap after 255, i.e. 256 = 0 */
-        let h =
-          if (l === 255) {
-            (cpu.registers.h - 1) land 0xff;
-          } else {
-            cpu.registers.h;
-          };
-        s |> newState(~cpu=cpu |> setRegisters(~h, ~l) |> machineCycles(2));
+        let cpu = decrementHl(cpu);
+        s |> newState(~cpu=cpu |> machineCycles(2));
       };
     let dec_sp: op =
       ({cpu} as s) => {
@@ -961,20 +1103,46 @@ module Ops = {
   };
 
   module Rotation = {
+    let rlc = (cpu, ~mCycles=1, register) => {
+      let highBit = register land 0b10000000 > 0 ? 1 : 0;
+      let r = (register lsl 1 + highBit) land 255;
+      (r, cpu |> machineCycles(mCycles) |> setFlag(Flags.C, highBit));
+    };
     /* 07: RLCA */
     let rlca: op =
       ({cpu} as s) => {
-        let {a} = cpu.registers;
-        let highBit = a land 0b10000000 > 0 ? 1 : 0;
-        let a' = (a lsl 1 + highBit) land 255;
-        s
-        |> newState(
-             ~cpu=
-               cpu
-               |> machineCycles(1)
-               |> setRegisters(~a=a')
-               |> setFlag(Flags.C, highBit),
-           );
+        let (a, cpu) = rlc(cpu, cpu.registers.a);
+        s |> newState(~cpu=cpu |> setRegisters(~a));
+      };
+    let rlcb: op =
+      ({cpu} as s) => {
+        let (b, cpu) = rlc(cpu, ~mCycles=2, cpu.registers.b);
+        s |> newState(~cpu=cpu |> setRegisters(~b));
+      };
+    let rlcc: op =
+      ({cpu} as s) => {
+        let (c, cpu) = rlc(cpu, ~mCycles=2, cpu.registers.c);
+        s |> newState(~cpu=cpu |> setRegisters(~c));
+      };
+    let rlcd: op =
+      ({cpu} as s) => {
+        let (d, cpu) = rlc(cpu, ~mCycles=2, cpu.registers.d);
+        s |> newState(~cpu=cpu |> setRegisters(~d));
+      };
+    let rlce: op =
+      ({cpu} as s) => {
+        let (e, cpu) = rlc(cpu, ~mCycles=2, cpu.registers.e);
+        s |> newState(~cpu=cpu |> setRegisters(~e));
+      };
+    let rlch: op =
+      ({cpu} as s) => {
+        let (h, cpu) = rlc(cpu, ~mCycles=2, cpu.registers.h);
+        s |> newState(~cpu=cpu |> setRegisters(~h));
+      };
+    let rlcl: op =
+      ({cpu} as s) => {
+        let (l, cpu) = rlc(cpu, ~mCycles=2, cpu.registers.l);
+        s |> newState(~cpu=cpu |> setRegisters(~l));
       };
     /* 0F */
     let rrca: op =
@@ -1107,21 +1275,352 @@ module Ops = {
         s |> newState(~cpu=cpu |> setRegisters(~h, ~l), ~mmu);
       };
   };
+
+  module Add = {
+    let isCarry = value => {
+      value > 0xffff;
+    };
+    let isHalfCarry = (a, b) => {
+      // true if the half carry bit should be set
+      // i.e. there was a carry on the lower 4 bits
+      a land 0xf + b land 0xf > 0xf;
+    };
+  };
+
+  module Add_16 = {
+    let isCarry = Add.isCarry;
+    let isHalfCarry = Add.isHalfCarry;
+
+    let add_hl = (cpu, value) => {
+      let hl = rHl(cpu) + value;
+      let h = hl lsr 8 land 255;
+      let l = hl land 255;
+
+      (
+        cpu
+        |> setFlag(C, isCarry(hl) |> b2i)
+        |> setFlag(H, isHalfCarry(rHl(cpu), value) |> b2i)
+        |> machineCycles(2),
+        h,
+        l,
+      );
+    };
+    /* 09: ADD HL,BC */
+    let add_hl_bc: op =
+      ({cpu} as s) => {
+        let (cpu, h, l) = add_hl(cpu, rBc(cpu));
+        s |> newState(~cpu=cpu |> setRegisters(~h, ~l));
+      };
+    let add_hl_de: op =
+      ({cpu} as s) => {
+        let (cpu, h, l) = add_hl(cpu, rDe(cpu));
+        s |> newState(~cpu=cpu |> setRegisters(~h, ~l));
+      };
+    let add_hl_hl: op =
+      ({cpu} as s) => {
+        let (cpu, h, l) = add_hl(cpu, rHl(cpu));
+        s |> newState(~cpu=cpu |> setRegisters(~h, ~l));
+      };
+    let add_hl_sp: op =
+      ({cpu} as s) => {
+        let (cpu, h, l) = add_hl(cpu, cpu.registers.sp);
+        s |> newState(~cpu=cpu |> setRegisters(~h, ~l));
+      };
+    let add_sp_n: op =
+      ({cpu, mmu, gpu} as s) => {
+        let (n, mmu) = Mmu.read8(programCount(cpu), {mmu, gpu});
+        // TODO: set flags H and/or C?
+        s
+        |> newState(
+             ~cpu=
+               cpu
+               |> setFlag(Z, 0)
+               |> setFlag(N, 0)
+               |> incrementSp(~amount=signed(n))
+               |> incrementPc(1)
+               |> machineCycles(4),
+             ~mmu,
+           );
+      };
+  };
+
+  module Misc = {
+    let daa: op =
+      ({cpu} as s) => {
+        // var a=Z80._r.a;
+        // if((Z80._r.f&0x20)||((Z80._r.a&15)>9)) Z80._r.a+=6;
+        // Z80._r.f&=0xEF;
+        // if((Z80._r.f&0x20)||(a>0x99)) { Z80._r.a+=0x60; Z80._r.f|=0x10; }
+        // Z80._r.m=1;
+        let {a, f} = cpu.registers;
+        let a =
+          if (f land 0x20 !== 0 || a land 0xf > 9) {
+            a + 6;
+          } else {
+            a;
+          };
+        cpu.registers.f = cpu.registers.f land 0xEF;
+        let (a, f) =
+          if (cpu.registers.f land 0x20 !== 0 || a > 0x99) {
+            (a + 0x60, cpu.registers.f lor 0x10);
+          } else {
+            (a, cpu.registers.f);
+          };
+
+        let a = a land 0xff;
+        let cpu =
+          cpu
+          |> setRegisters(~a, ~f)
+          |> setFlag(N, 0)
+          |> setFlag(H, 0)
+          |> setFlag(C, 0)
+          |> machineCycles(1);
+
+        s |> newState(~cpu);
+      };
+    let cpl: op =
+      ({cpu} as s) => {
+        let a = cpu.registers.a lxor 0xff;
+        let cpu =
+          cpu
+          |> setRegisters(~a)
+          |> setFlag(N, 1)
+          |> setFlag(H, 1)
+          |> machineCycles(1);
+        s |> newState(~cpu);
+      };
+    let ccf: op =
+      ({cpu} as s) => {
+        s
+        |> newState(
+             ~cpu=
+               cpu
+               |> setFlag(N, 0)
+               |> setFlag(H, 0)
+               |> toggleFlag(C)
+               |> machineCycles(1),
+           );
+      };
+    let scf: op =
+      ({cpu} as s) => {
+        s
+        |> newState(
+             ~cpu=
+               cpu
+               |> setFlag(N, 0)
+               |> setFlag(H, 0)
+               |> setFlag(C, 1)
+               |> machineCycles(1),
+           );
+      };
+    let halt: op =
+      ({cpu} as s) => {
+        cpu.halt = 1;
+        s |> newState(~cpu);
+      };
+  };
+
+  module Jump = {
+    let jp_nn: op =
+      ({cpu, mmu, gpu} as s) => {
+        let (nn, mmu) = Mmu.read16(programCount(cpu), {mmu, gpu});
+        cpu.registers.pc = nn;
+        s |> newState(~cpu=cpu |> machineCycles(3), ~mmu);
+      };
+    let jp_m_hl: op =
+      ({cpu, mmu} as s) => {
+        cpu.registers.pc = rHl(cpu);
+        s |> newState(~cpu=cpu |> machineCycles(4), ~mmu);
+      };
+    let jp_nz_nn: op =
+      ({cpu, mmu, gpu} as s) => {
+        let (pc, mmu, mCycles) =
+          if (!Flags.isSet(Z, cpu.registers.f)) {
+            // if (cpu.registers.f land 0xb10000000 === 0x00) {
+            let (pc', mmu) = Mmu.read16(programCount(cpu), {mmu, gpu});
+            (pc', mmu, 4);
+          } else {
+            let pc' = programCount(cpu) + 2;
+            (pc', mmu, 3);
+          };
+        cpu.registers.pc = pc;
+
+        s |> newState(~cpu=cpu |> machineCycles(mCycles), ~mmu);
+      };
+    let jp_z_nn: op =
+      ({cpu, mmu, gpu} as s) => {
+        let (pc, mmu, mCycles) =
+          if (Flags.isSet(Z, cpu.registers.f)) {
+            // if (cpu.registers.f land 0xb10000000 === 0b10000000) {
+            let (pc', mmu) = Mmu.read16(programCount(cpu), {mmu, gpu});
+            (pc', mmu, 4);
+          } else {
+            let pc' = programCount(cpu) + 2;
+            (pc', mmu, 3);
+          };
+        cpu.registers.pc = pc;
+
+        s |> newState(~cpu=cpu |> machineCycles(mCycles), ~mmu);
+      };
+    let jp_nc_nn: op =
+      ({cpu, mmu, gpu} as s) => {
+        let (pc, mmu, mCycles) =
+          if (!Flags.isSet(C, cpu.registers.f)) {
+            // if (cpu.registers.f land 0xb00010000 === 0x00) {
+            let (pc', mmu) = Mmu.read16(programCount(cpu), {mmu, gpu});
+            (pc', mmu, 4);
+          } else {
+            let pc' = programCount(cpu) + 2;
+            (pc', mmu, 3);
+          };
+        cpu.registers.pc = pc;
+
+        s |> newState(~cpu=cpu |> machineCycles(mCycles), ~mmu);
+      };
+    let jp_c_nn: op =
+      ({cpu, mmu, gpu} as s) => {
+        let (pc, mmu, mCycles) =
+          if (Flags.isSet(C, cpu.registers.f)) {
+            // if (cpu.registers.f land 0xb00010000 === 0b00010000) {
+            let (pc', mmu) = Mmu.read16(programCount(cpu), {mmu, gpu});
+            (pc', mmu, 4);
+          } else {
+            let pc' = programCount(cpu) + 2;
+            (pc', mmu, 3);
+          };
+        cpu.registers.pc = pc;
+
+        s |> newState(~cpu=cpu |> machineCycles(mCycles), ~mmu);
+      };
+    let jr_n: op =
+      ({cpu, mmu, gpu} as s) => {
+        let (n, mmu) = Mmu.read8(programCount(cpu), {mmu, gpu});
+        s
+        |> newState(
+             ~cpu=cpu |> incrementPc(signed(n) + 1) |> machineCycles(2),
+             ~mmu,
+           );
+      };
+    let jr_nz_n: op =
+      ({cpu, mmu, gpu} as s) => {
+        let pc = programCount(cpu);
+        let (n, mmu) = Mmu.read8(pc, {mmu, gpu});
+        let (pc, mCycles) =
+          if (!Flags.isSet(Z, cpu.registers.f)) {
+            (pc + 1 + signed(n), 3);
+          } else {
+            (pc + 1, 2);
+          };
+        s
+        |> newState(
+             ~cpu=cpu |> incrementPc(pc) |> machineCycles(mCycles),
+             ~mmu,
+           );
+      };
+    let jr_z_n: op =
+      ({cpu, mmu, gpu} as s) => {
+        let pc = programCount(cpu);
+        let (n, mmu) = Mmu.read8(pc, {mmu, gpu});
+        let (pc, mCycles) =
+          if (Flags.isSet(Z, cpu.registers.f)) {
+            (pc + 1 + signed(n), 3);
+          } else {
+            (pc + 1, 2);
+          };
+        s
+        |> newState(
+             ~cpu=cpu |> incrementPc(pc) |> machineCycles(mCycles),
+             ~mmu,
+           );
+      };
+    let jr_nc_n: op =
+      ({cpu, mmu, gpu} as s) => {
+        let pc = programCount(cpu);
+        let (n, mmu) = Mmu.read8(pc, {mmu, gpu});
+        let (pc, mCycles) =
+          if (!Flags.isSet(C, cpu.registers.f)) {
+            (pc + 1 + signed(n), 3);
+          } else {
+            (pc + 1, 2);
+          };
+        s
+        |> newState(
+             ~cpu=cpu |> incrementPc(pc) |> machineCycles(mCycles),
+             ~mmu,
+           );
+      };
+    let jr_c_n: op =
+      ({cpu, mmu, gpu} as s) => {
+        let pc = programCount(cpu);
+        let (n, mmu) = Mmu.read8(pc, {mmu, gpu});
+        let (pc, mCycles) =
+          if (Flags.isSet(C, cpu.registers.f)) {
+            (pc + 1 + signed(n), 3);
+          } else {
+            (pc + 1, 2);
+          };
+        s
+        |> newState(
+             ~cpu=cpu |> incrementPc(pc) |> machineCycles(mCycles),
+             ~mmu,
+           );
+      };
+  };
+
+  module Call = {
+    let call = ({cpu, mmu, gpu}) => {
+      let cpu = cpu |> decrementSp(~amount=2);
+      let (mmu, gpu) =
+        Mmu.write16(cpu.registers.sp, programCount(cpu) + 2, {mmu, gpu});
+      let (pc, mmu) = Mmu.read16(programCount(cpu), {mmu, gpu});
+      (pc, mmu);
+    };
+    let call_nn: op =
+      ({cpu} as s) => {
+        let (pc, mmu) = call(s);
+        let cpu = cpu |> setPc(pc) |> machineCycles(4);
+        s |> newState(~cpu, ~mmu);
+      };
+    let call_nz_nn: op =
+      ({cpu, mmu} as s) => {
+        let cpu = cpu |> machineCycles(3);
+        let pc = programCount(cpu);
+        let (pc, mmu, mCycles) =
+          if (!Flags.isSet(Z, cpu.registers.f)) {
+            let (pc, mmu) = call(s);
+            (pc, mmu, 1);
+          } else {
+            (pc + 2, mmu, 0);
+          };
+        s |> newState(~cpu=cpu |> setPc(pc) |> machineCycles(mCycles), ~mmu);
+      };
+  };
+
+  module Swap = {};
+
+  module Cb = {
+    let cb: op =
+      ({cpu, mmu, gpu} as s) => {
+        let (nextInstr, mmu) = Mmu.read8(programCount(cpu), {mmu, gpu});
+
+        s |> newState(~cpu=cpu |> incrementPc(1), ~mmu);
+      };
+  };
 };
 
 let exec: int => Ops.op =
   instruction =>
     switch (instruction) {
     | 0x00 => Ops.nop
-    | 0x01 => Ops.Load_16_8.ld_bc_nn
+    | 0x01 => Ops.Load_nn_16.ld_bc_nn
     | 0x02 => Ops.Load_8_A.ld_m_bc_a
     | 0x03 => Ops.Increment16.inc_bc
     | 0x04 => Ops.Increment8.inc_b
     | 0x05 => Ops.Decrement8.dec_b
     | 0x06 => Ops.Load_nn_8.ld_b_n
     | 0x07 => Ops.Rotation.rlca
-    | 0x08 => Ops.ld_m_nn_sp
-    | 0x09 => Ops.add_hl_bc
+    | 0x08 => Ops.Load_nn_16.ld_m_nn_sp
+    | 0x09 => Ops.Add_16.add_hl_bc
     | 0x0A => Ops.Load_A_8.ld_a_m_bc
     | 0x0B => Ops.Decrement16.dec_bc
     | 0x0C => Ops.Increment8.inc_c
@@ -1129,53 +1628,53 @@ let exec: int => Ops.op =
     | 0x0E => Ops.Load_nn_8.ld_c_n
     | 0x0F => Ops.Rotation.rrca
     | 0x10 => Ops.nop
-    | 0x11 => Ops.Load_16_8.ld_de_nn
+    | 0x11 => Ops.Load_nn_16.ld_de_nn
     | 0x12 => Ops.Load_8_A.ld_m_de_a
     | 0x13 => Ops.Increment16.inc_de
     | 0x14 => Ops.Increment8.inc_d
     | 0x15 => Ops.Decrement8.dec_d
     | 0x16 => Ops.Load_nn_8.ld_d_n
     | 0x17 => Ops.Rotation.rla
-    | 0x18 => Ops.nop
-    | 0x19 => Ops.nop
+    | 0x18 => Ops.Jump.jr_n
+    | 0x19 => Ops.Add_16.add_hl_de
     | 0x1A => Ops.Load_A_8.ld_a_m_de
     | 0x1B => Ops.Decrement16.dec_de
     | 0x1C => Ops.Increment8.inc_e
     | 0x1D => Ops.Decrement8.dec_e
     | 0x1E => Ops.Load_nn_8.ld_e_n
     | 0x1F => Ops.Rotation.rra
-    | 0x20 => Ops.nop
-    | 0x21 => Ops.Load_16_8.ld_hl_nn
-    | 0x22 => Ops.nop
+    | 0x20 => Ops.Jump.jr_nz_n
+    | 0x21 => Ops.Load_nn_16.ld_hl_nn
+    | 0x22 => Ops.Load_8_A.ld_hli_a
     | 0x23 => Ops.Increment16.inc_hl
     | 0x24 => Ops.Increment8.inc_h
     | 0x25 => Ops.Decrement8.dec_h
     | 0x26 => Ops.Load_nn_8.ld_h_n
-    | 0x27 => Ops.nop
-    | 0x28 => Ops.nop
-    | 0x29 => Ops.nop
-    | 0x2A => Ops.nop
+    | 0x27 => Ops.Misc.daa
+    | 0x28 => Ops.Jump.jr_z_n
+    | 0x29 => Ops.Add_16.add_hl_hl
+    | 0x2A => Ops.Load_A_8.ld_a_m_hli
     | 0x2B => Ops.Decrement16.dec_hl
     | 0x2C => Ops.Increment8.inc_l
     | 0x2D => Ops.Decrement8.dec_l
     | 0x2E => Ops.Load_nn_8.ld_l_n
-    | 0x2F => Ops.nop
-    | 0x30 => Ops.nop
-    | 0x31 => Ops.nop
-    | 0x32 => Ops.nop
+    | 0x2F => Ops.Misc.cpl
+    | 0x30 => Ops.Jump.jr_nc_n
+    | 0x31 => Ops.Load_nn_16.ld_sp_nn
+    | 0x32 => Ops.Load_8_A.ld_hld_a
     | 0x33 => Ops.Increment16.inc_sp
     | 0x34 => Ops.nop
     | 0x35 => Ops.Decrement8.dec_m_hl
     | 0x36 => Ops.Load_r1_r2.ld_m_hl_n
-    | 0x37 => Ops.nop
-    | 0x38 => Ops.nop
-    | 0x39 => Ops.nop
-    | 0x3A => Ops.nop
+    | 0x37 => Ops.Misc.scf
+    | 0x38 => Ops.Jump.jr_c_n
+    | 0x39 => Ops.Add_16.add_hl_sp
+    | 0x3A => Ops.Load_A_8.ld_a_m_hld
     | 0x3B => Ops.Decrement16.dec_sp
     | 0x3C => Ops.Increment8.inc_a
     | 0x3D => Ops.Decrement8.dec_a
     | 0x3E => Ops.Load_A_8.ld_a_m_n
-    | 0x3F => Ops.nop
+    | 0x3F => Ops.Misc.ccf
     | 0x40 => Ops.Load_r1_r2.ld_b_b
     | 0x41 => Ops.Load_r1_r2.ld_b_c
     | 0x42 => Ops.Load_r1_r2.ld_b_d
@@ -1230,7 +1729,7 @@ let exec: int => Ops.op =
     | 0x73 => Ops.Load_r1_r2.ld_m_hl_e
     | 0x74 => Ops.Load_r1_r2.ld_m_hl_h
     | 0x75 => Ops.Load_r1_r2.ld_m_hl_l
-    | 0x76 => Ops.nop
+    | 0x76 => Ops.Misc.halt
     | 0x77 => Ops.Load_8_A.ld_m_hl_a
     | 0x78 => Ops.Load_A_8.ld_a_b
     | 0x79 => Ops.Load_A_8.ld_a_c
@@ -1306,23 +1805,23 @@ let exec: int => Ops.op =
     | 0xBF => Ops.nop
     | 0xC0 => Ops.nop
     | 0xC1 => Ops.Pop.pop_bc
-    | 0xC2 => Ops.nop
-    | 0xC3 => Ops.nop
-    | 0xC4 => Ops.nop
+    | 0xC2 => Ops.Jump.jp_nz_nn
+    | 0xC3 => Ops.Jump.jp_nn
+    | 0xC4 => Ops.Call.call_nz_nn
     | 0xC5 => Ops.Push.push_bc
     | 0xC6 => Ops.nop
     | 0xC7 => Ops.nop
     | 0xC8 => Ops.nop
     | 0xC9 => Ops.nop
-    | 0xCA => Ops.nop
-    | 0xCB => Ops.nop
+    | 0xCA => Ops.Jump.jp_z_nn
+    | 0xCB => Ops.Cb.cb
     | 0xCC => Ops.nop
-    | 0xCD => Ops.nop
+    | 0xCD => Ops.Call.call_nn
     | 0xCE => Ops.nop
     | 0xCF => Ops.nop
     | 0xD0 => Ops.nop
     | 0xD1 => Ops.Pop.pop_de
-    | 0xD2 => Ops.nop
+    | 0xD2 => Ops.Jump.jp_nc_nn
     | 0xD3 => Ops.nop
     | 0xD4 => Ops.nop
     | 0xD5 => Ops.Push.push_de
@@ -1330,13 +1829,13 @@ let exec: int => Ops.op =
     | 0xD7 => Ops.nop
     | 0xD8 => Ops.nop
     | 0xD9 => Ops.nop
-    | 0xDA => Ops.nop
+    | 0xDA => Ops.Jump.jp_c_nn
     | 0xDB => Ops.nop
     | 0xDC => Ops.nop
     | 0xDD => Ops.nop
     | 0xDE => Ops.nop
     | 0xDF => Ops.nop
-    | 0xE0 => Ops.nop
+    | 0xE0 => Ops.Load_8_A.ldh_n_a
     | 0xE1 => Ops.Pop.pop_hl
     | 0xE2 => Ops.Load_8_A.ld_m_c_a
     | 0xE3 => Ops.nop
@@ -1344,15 +1843,15 @@ let exec: int => Ops.op =
     | 0xE5 => Ops.Push.push_hl
     | 0xE6 => Ops.nop
     | 0xE7 => Ops.nop
-    | 0xE8 => Ops.nop
-    | 0xE9 => Ops.nop
+    | 0xE8 => Ops.Add_16.add_sp_n
+    | 0xE9 => Ops.Jump.jp_m_hl
     | 0xEA => Ops.Load_8_A.ld_m_nn_a
     | 0xEB => Ops.nop
     | 0xEC => Ops.nop
     | 0xED => Ops.nop
     | 0xEE => Ops.nop
     | 0xEF => Ops.nop
-    | 0xF0 => Ops.nop
+    | 0xF0 => Ops.Load_A_8.ldh_a_n
     | 0xF1 => Ops.Pop.pop_af
     | 0xF2 => Ops.Load_A_8.ld_a_m_c
     | 0xF3 => Ops.nop
@@ -1360,8 +1859,8 @@ let exec: int => Ops.op =
     | 0xF5 => Ops.Push.push_af
     | 0xF6 => Ops.nop
     | 0xF7 => Ops.nop
-    | 0xF8 => Ops.nop
-    | 0xF9 => Ops.nop
+    | 0xF8 => Ops.Load_nn_16.ld_hl_sp_n
+    | 0xF9 => Ops.Load_nn_16.ld_sp_hl
     | 0xFA => Ops.Load_A_8.ld_a_m_nn
     | 0xFB => Ops.nop
     | 0xFC => Ops.nop
