@@ -3,6 +3,10 @@ open Jest;
 describe("Cpu", () => {
   open Expect;
 
+  let initialValues = () => {
+    (Mmu.load(Array.make(4096, 0)), Gpu.make());
+  };
+
   describe("Signed", () => {
     testAll(
       "returns a positive number if it is < 127",
@@ -224,6 +228,66 @@ describe("Cpu", () => {
         Cpu.Ops.Pop.pop_hl,
         Cpu.rHl,
       );
+    });
+
+    describe("AND", () => {
+      let initialValues = () => (Mmu.load(Array.make(4096, 0)), Gpu.make());
+      let a = 0b01010101;
+      let b = 0b10001001;
+
+      test("A", () => {
+        let (mmu, gpu) = initialValues();
+        let cpu = Cpu.make() |> Cpu.setRegisters(~a);
+        let cpu1 = Cpu.Ops.And.and_a({cpu, mmu, gpu}).cpu;
+
+        expect(cpu1.registers.a) |> toBe(a land a);
+      });
+      test("B", () => {
+        let (mmu, gpu) = initialValues();
+        let cpu = Cpu.make() |> Cpu.setRegisters(~a, ~b);
+        let cpu1 = Cpu.Ops.And.and_b({cpu, mmu, gpu}).cpu;
+
+        expect(cpu1.registers.a) |> toBe(a land b);
+      });
+      test("C", () => {
+        let (mmu, gpu) = initialValues();
+        let cpu = Cpu.make() |> Cpu.setRegisters(~a, ~c=b);
+        let cpu1 = Cpu.Ops.And.and_c({cpu, mmu, gpu}).cpu;
+
+        expect(cpu1.registers.a) |> toBe(a land b);
+      });
+    });
+
+    describe("LD_B_N", () => {
+      let initialPc = 0xE000;
+
+      test("B", () => {
+        let (mmu, gpu) = initialValues();
+        let cpu = Cpu.make() |> Cpu.setPc(initialPc);
+        let (mmu, gpu) = Mmu.write8(initialPc, 64, {mmu, gpu});
+
+        let cpu1 = Cpu.Ops.Load_nn_8.ld_b_n({cpu, mmu, gpu}).cpu;
+        let cpu2 = Cpu.Ops.Load_nn_8.load_nn_8(C, {cpu, mmu, gpu}).cpu;
+
+        expect(cpu1) |> toEqual(cpu2);
+      });
+      test("B", () => {
+        let (mmu, gpu) = initialValues();
+        let cpu = Cpu.make() |> Cpu.setPc(initialPc);
+        let (mmu, gpu) = Mmu.write8(initialPc, 64, {mmu, gpu});
+
+        let cpu1 = Cpu.Ops.Load_nn_8.ld_b_n({cpu, mmu, gpu}).cpu;
+
+        expect(cpu1.registers.b) |> toEqual(64);
+      });
+      test("PC", () => {
+        let (mmu, gpu) = initialValues();
+        let cpu = Cpu.make() |> Cpu.setPc(initialPc);
+
+        let cpu1 = Cpu.Ops.Load_nn_8.load_nn_8(C, {cpu, mmu, gpu}).cpu;
+
+        expect(cpu1.registers.pc) |> toEqual(initialPc + 1);
+      });
     });
 
     testAll(
