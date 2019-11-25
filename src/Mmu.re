@@ -142,6 +142,11 @@ let write8 = (addr, v, {gpu, mmu}: state) => {
     gpu.vram[addr land 0x1fff] = v;
     Gpu.updateTile(addr, gpu);
     (mmu, gpu);
+  | 0xC000
+  | 0xD000
+  | 0xE000 =>
+    mmu.workRam[addr land 0x1fff] = v;
+    (mmu, gpu);
   | _ => (mmu, gpu)
   };
 };
