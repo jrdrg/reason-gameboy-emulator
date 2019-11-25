@@ -123,19 +123,28 @@ let renderScan = (renderer: Renderer.t, gpu: t): t => {
     | 160 => ()
     | _ =>
       // Render the pixel of the current tile
-      Js.Option.(
-        gpu.tileset[tile]
-        |> andThen((. tile') => tile'[y])
-        |> andThen((. tileY) => tileY[xc])
-        |> andThen((. pixel) => palette[pixel])
-        |> map((. color) => {
-             Renderer.setPixel(renderer, ~pixel=cOff + 0, ~color);
-             Renderer.setPixel(renderer, ~pixel=cOff + 1, ~color);
-             Renderer.setPixel(renderer, ~pixel=cOff + 2, ~color);
-             Renderer.setPixel(renderer, ~pixel=cOff + 3, ~color=255);
-           })
-      )
-      |> ignore;
+      let tile' = gpu.tileset[tile];
+      // these nested switches are more performant than using Js.Option .map and .andThen
+      switch (tile') {
+      | Some(t) =>
+        switch (t[y]) {
+        | Some(tY) =>
+          switch (tY[xc]) {
+          | Some(pixel) =>
+            switch (palette[pixel]) {
+            | Some(color) =>
+              Renderer.setPixel(renderer, ~pixel=cOff + 0, ~color);
+              Renderer.setPixel(renderer, ~pixel=cOff + 1, ~color);
+              Renderer.setPixel(renderer, ~pixel=cOff + 2, ~color);
+              Renderer.setPixel(renderer, ~pixel=cOff + 3, ~color=255);
+            | None => ()
+            }
+          | None => ()
+          }
+        | None => ()
+        }
+      | _ => ()
+      };
 
       let xc' = xc + 1;
 
@@ -173,7 +182,8 @@ let step = (mCycles: int, renderer: Renderer.t, gpu: t) => {
     if (modeclock >= 51) {
       let clock = 0;
       let line = gpu.line + 1;
-      if (line == screen_height - 1) {
+      // if (line == screen_height - 1) {
+      if (line == screen_height) {
         Renderer.renderToScreen(renderer);
         /* enter vblank */
         {...gpu, clock, line, mode: Vblank};
