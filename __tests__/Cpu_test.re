@@ -38,12 +38,12 @@ describe("Cpu", () => {
       describe("INC B", () => {
         test("increments register b", () => {
           let (cpu, mmu, gpu) = makeState(~b=9, ());
-          let cpu1 = Cpu.Ops.Increment8.inc_b({cpu, mmu, gpu}).cpu;
+          let cpu1 = Cpu_ops.Ops.Increment8.inc_b({cpu, mmu, gpu}).cpu;
           expect(cpu1.registers.b) |> toEqual(0x0a);
         });
         test("updates the carry flag", () => {
           let (cpu, mmu, gpu) = makeState(~b=255, ());
-          let cpu1 = Cpu.Ops.Increment8.inc_b({cpu, mmu, gpu}).cpu;
+          let cpu1 = Cpu_ops.Ops.Increment8.inc_b({cpu, mmu, gpu}).cpu;
           expect((cpu1.registers.b, cpu1.registers.f))
           |> toEqual((0x0, 0x0 lor 0x1 lsl 7));
         });
@@ -51,19 +51,19 @@ describe("Cpu", () => {
       describe("INC C", () => {
         test("increments register c", () => {
           let (cpu, mmu, gpu) = makeState(~c=9, ());
-          let cpu1 = Cpu.Ops.Increment8.inc_c({cpu, mmu, gpu}).cpu;
+          let cpu1 = Cpu_ops.Ops.Increment8.inc_c({cpu, mmu, gpu}).cpu;
           expect(cpu1.registers.c) |> toEqual(0x0a);
         });
         test("updates the carry flag", () => {
           let (cpu, mmu, gpu) = makeState(~c=255, ());
-          let cpu1 = Cpu.Ops.Increment8.inc_c({cpu, mmu, gpu}).cpu;
+          let cpu1 = Cpu_ops.Ops.Increment8.inc_c({cpu, mmu, gpu}).cpu;
           expect((cpu1.registers.c, cpu1.registers.f))
           |> toEqual((0x0, 0x0 lor 0x1 lsl 7));
         });
       });
       test("INC BC", () => {
         let (cpu, mmu, gpu) = makeState(~c=255, ());
-        let cpu1 = Cpu.Ops.Increment16.inc_bc({mmu, gpu, cpu}).cpu;
+        let cpu1 = Cpu_ops.Ops.Increment16.inc_bc({mmu, gpu, cpu}).cpu;
         expect((Cpu.rBc(cpu1), cpu1.registers.b, cpu1.registers.c))
         |> toEqual((256, 0x1, 0x0));
       });
@@ -71,7 +71,7 @@ describe("Cpu", () => {
         let cpu = Cpu.make() |> Cpu.setRegisters(~e=255);
         let mmu = Mmu.load(Array.make(4096, 0));
         let gpu = Gpu.make();
-        let cpu1 = Cpu.Ops.Increment16.inc_de({mmu, gpu, cpu}).cpu;
+        let cpu1 = Cpu_ops.Ops.Increment16.inc_de({mmu, gpu, cpu}).cpu;
         expect((Cpu.rDe(cpu1), cpu1.registers.d, cpu1.registers.e))
         |> toEqual((256, 0x1, 0x0));
       });
@@ -79,7 +79,7 @@ describe("Cpu", () => {
         let cpu = Cpu.make() |> Cpu.setRegisters(~l=255);
         let mmu = Mmu.load(Array.make(4096, 0));
         let gpu = Gpu.make();
-        let cpu1 = Cpu.Ops.Increment16.inc_hl({mmu, gpu, cpu}).cpu;
+        let cpu1 = Cpu_ops.Ops.Increment16.inc_hl({mmu, gpu, cpu}).cpu;
         expect((Cpu.rHl(cpu1), cpu1.registers.h, cpu1.registers.l))
         |> toEqual((256, 0x1, 0x0));
       });
@@ -90,7 +90,7 @@ describe("Cpu", () => {
         let cpu = Cpu.make() |> Cpu.setRegisters(~b=1, ~c=0);
         let mmu = Mmu.load(Array.make(4096, 0));
         let gpu = Gpu.make();
-        let cpu1 = Cpu.Ops.Decrement16.dec_bc({mmu, gpu, cpu}).cpu;
+        let cpu1 = Cpu_ops.Ops.Decrement16.dec_bc({mmu, gpu, cpu}).cpu;
         expect((Cpu.rBc(cpu1), cpu1.registers.b, cpu1.registers.c))
         |> toEqual((255, 0x0, 0xff));
       });
@@ -98,7 +98,7 @@ describe("Cpu", () => {
         let cpu = Cpu.make() |> Cpu.setRegisters(~d=1, ~e=0);
         let mmu = Mmu.load(Array.make(4096, 0));
         let gpu = Gpu.make();
-        let cpu1 = Cpu.Ops.Decrement16.dec_de({mmu, gpu, cpu}).cpu;
+        let cpu1 = Cpu_ops.Ops.Decrement16.dec_de({mmu, gpu, cpu}).cpu;
         expect((Cpu.rDe(cpu1), cpu1.registers.d, cpu1.registers.e))
         |> toEqual((255, 0x0, 0xff));
       });
@@ -106,7 +106,7 @@ describe("Cpu", () => {
         let cpu = Cpu.make() |> Cpu.setRegisters(~h=1, ~l=0);
         let mmu = Mmu.load(Array.make(4096, 0));
         let gpu = Gpu.make();
-        let cpu1 = Cpu.Ops.Decrement16.dec_hl({mmu, gpu, cpu}).cpu;
+        let cpu1 = Cpu_ops.Ops.Decrement16.dec_hl({mmu, gpu, cpu}).cpu;
         expect((Cpu.rHl(cpu1), cpu1.registers.h, cpu1.registers.l))
         |> toEqual((255, 0x0, 0xff));
       });
@@ -118,7 +118,7 @@ describe("Cpu", () => {
         let mmu = Mmu.load(Array.make(4096, 0));
         let gpu = Gpu.make();
 
-        let cpu1 = Cpu.Ops.Add_16.add_hl_bc({cpu, mmu, gpu}).cpu;
+        let cpu1 = Cpu_ops.Ops.Add_16.add_hl_bc({cpu, mmu, gpu}).cpu;
         expect(Cpu.rHl(cpu1)) |> toEqual(0x3dc);
       });
       test("sets the half-carry flag", () => {
@@ -130,7 +130,7 @@ describe("Cpu", () => {
         let mmu = Mmu.load(Array.make(4096, 0));
         let gpu = Gpu.make();
 
-        let cpu1 = Cpu.Ops.Add_16.add_hl_bc({cpu, mmu, gpu}).cpu;
+        let cpu1 = Cpu_ops.Ops.Add_16.add_hl_bc({cpu, mmu, gpu}).cpu;
         expect(Cpu.getFlag(H, cpu1)) |> toEqual(0b00100000);
       });
       test("sets the carry flag", () => {
@@ -142,7 +142,7 @@ describe("Cpu", () => {
         let mmu = Mmu.load(Array.make(4096, 0));
         let gpu = Gpu.make();
 
-        let cpu1 = Cpu.Ops.Add_16.add_hl_bc({cpu, mmu, gpu}).cpu;
+        let cpu1 = Cpu_ops.Ops.Add_16.add_hl_bc({cpu, mmu, gpu}).cpu;
         expect(Cpu.getFlag(C, cpu1)) |> toEqual(0b00010000);
       });
     });
@@ -155,7 +155,7 @@ describe("Cpu", () => {
       };
 
       let generateTest =
-          (description, register, push: Cpu.Ops.op, pop: Cpu.Ops.op, read) => {
+          (description, register, push: Cpu_types.op, pop: Cpu_types.op, read) => {
         let addr = 0x8500;
 
         describe(
@@ -203,29 +203,29 @@ describe("Cpu", () => {
       generateTest(
         "AF",
         Cpu.AF,
-        Cpu.Ops.Push.push_af,
-        Cpu.Ops.Pop.pop_af,
+        Cpu_ops.Ops.Push.push_af,
+        Cpu_ops.Ops.Pop.pop_af,
         Cpu.rAf,
       );
       generateTest(
         "BC",
         Cpu.BC,
-        Cpu.Ops.Push.push_bc,
-        Cpu.Ops.Pop.pop_bc,
+        Cpu_ops.Ops.Push.push_bc,
+        Cpu_ops.Ops.Pop.pop_bc,
         Cpu.rBc,
       );
       generateTest(
         "DE",
         Cpu.DE,
-        Cpu.Ops.Push.push_de,
-        Cpu.Ops.Pop.pop_de,
+        Cpu_ops.Ops.Push.push_de,
+        Cpu_ops.Ops.Pop.pop_de,
         Cpu.rDe,
       );
       generateTest(
         "HL",
         Cpu.HL,
-        Cpu.Ops.Push.push_hl,
-        Cpu.Ops.Pop.pop_hl,
+        Cpu_ops.Ops.Push.push_hl,
+        Cpu_ops.Ops.Pop.pop_hl,
         Cpu.rHl,
       );
     });
@@ -238,21 +238,21 @@ describe("Cpu", () => {
       test("A", () => {
         let (mmu, gpu) = initialValues();
         let cpu = Cpu.make() |> Cpu.setRegisters(~a);
-        let cpu1 = Cpu.Ops.And.and_a({cpu, mmu, gpu}).cpu;
+        let cpu1 = Cpu_ops.Ops.And.and_a({cpu, mmu, gpu}).cpu;
 
         expect(cpu1.registers.a) |> toBe(a land a);
       });
       test("B", () => {
         let (mmu, gpu) = initialValues();
         let cpu = Cpu.make() |> Cpu.setRegisters(~a, ~b);
-        let cpu1 = Cpu.Ops.And.and_b({cpu, mmu, gpu}).cpu;
+        let cpu1 = Cpu_ops.Ops.And.and_b({cpu, mmu, gpu}).cpu;
 
         expect(cpu1.registers.a) |> toBe(a land b);
       });
       test("C", () => {
         let (mmu, gpu) = initialValues();
         let cpu = Cpu.make() |> Cpu.setRegisters(~a, ~c=b);
-        let cpu1 = Cpu.Ops.And.and_c({cpu, mmu, gpu}).cpu;
+        let cpu1 = Cpu_ops.Ops.And.and_c({cpu, mmu, gpu}).cpu;
 
         expect(cpu1.registers.a) |> toBe(a land b);
       });
@@ -266,8 +266,8 @@ describe("Cpu", () => {
         let cpu = Cpu.make() |> Cpu.setPc(initialPc);
         let (mmu, gpu) = Mmu.write8(initialPc, 64, {mmu, gpu});
 
-        let cpu1 = Cpu.Ops.Load_nn_8.ld_b_n({cpu, mmu, gpu}).cpu;
-        let cpu2 = Cpu.Ops.Load_nn_8.load_nn_8(C, {cpu, mmu, gpu}).cpu;
+        let cpu1 = Cpu_ops.Ops.Load_nn_8.ld_b_n({cpu, mmu, gpu}).cpu;
+        let cpu2 = Cpu_ops.Ops.Load_nn_8.load_nn_8(C, {cpu, mmu, gpu}).cpu;
 
         expect(cpu1) |> toEqual(cpu2);
       });
@@ -276,7 +276,7 @@ describe("Cpu", () => {
         let cpu = Cpu.make() |> Cpu.setPc(initialPc);
         let (mmu, gpu) = Mmu.write8(initialPc, 64, {mmu, gpu});
 
-        let cpu1 = Cpu.Ops.Load_nn_8.ld_b_n({cpu, mmu, gpu}).cpu;
+        let cpu1 = Cpu_ops.Ops.Load_nn_8.ld_b_n({cpu, mmu, gpu}).cpu;
 
         expect(cpu1.registers.b) |> toEqual(64);
       });
@@ -284,9 +284,24 @@ describe("Cpu", () => {
         let (mmu, gpu) = initialValues();
         let cpu = Cpu.make() |> Cpu.setPc(initialPc);
 
-        let cpu1 = Cpu.Ops.Load_nn_8.load_nn_8(C, {cpu, mmu, gpu}).cpu;
+        let cpu1 = Cpu_ops.Ops.Load_nn_8.load_nn_8(C, {cpu, mmu, gpu}).cpu;
 
         expect(cpu1.registers.pc) |> toEqual(initialPc + 1);
+      });
+    });
+
+    describe("Swap", () => {
+      test("A", () => {
+        let (mmu, gpu) = initialValues();
+        let cpu = Cpu.make() |> Cpu.setRegisters(~a=0b11110000);
+        let cpu = Cpu_ops.Ops.Swap.swap_a({cpu, mmu, gpu}).cpu;
+        expect(cpu.registers.a) |> toBe(0b00001111);
+      });
+      test("B", () => {
+        let (mmu, gpu) = initialValues();
+        let cpu = Cpu.make() |> Cpu.setRegisters(~b=0b11110010);
+        let cpu = Cpu_ops.Ops.Swap.swap_b({cpu, mmu, gpu}).cpu;
+        expect(cpu.registers.b) |> toBe(0b00101111);
       });
     });
 
@@ -301,7 +316,7 @@ describe("Cpu", () => {
         let cpu = Cpu.make() |> Cpu.setRegisters(~a=input);
         let mmu = Mmu.load(Array.make(4096, 0));
         let gpu = Gpu.make();
-        let cpu1 = Cpu.Ops.Rotation.rlca({cpu, mmu, gpu}).cpu;
+        let cpu1 = Cpu_ops.Ops.Rotation.rlca({cpu, mmu, gpu}).cpu;
         expect((cpu1.registers.a, Cpu.getFlag(Cpu.Flags.C, cpu1)))
         |> toEqual((expected, carry));
       },
