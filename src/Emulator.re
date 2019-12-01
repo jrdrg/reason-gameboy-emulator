@@ -1,5 +1,11 @@
 exception NoCycles(string);
 
+type debug = {
+  instruction: int,
+  pc: int,
+  sp: int,
+};
+
 /* http://marc.rawer.de/Gameboy/Docs/GBCPUman.pdf */
 type state = {
   mutable frameCount: int,
@@ -8,6 +14,7 @@ type state = {
   mutable cpu: Cpu.t,
   mutable mmu: Mmu.t,
   renderer: Renderer.t,
+  debugInstructions: list(debug),
 };
 
 let load = bytes => {
@@ -20,6 +27,7 @@ let load = bytes => {
     gpu: Gpu.make(),
     cpu: Cpu.make(),
     mmu,
+    debugInstructions: [],
   };
 };
 
@@ -31,6 +39,21 @@ let reset = state => {
   gpu: Gpu.make(),
 };
 
+let addInstructionToDebug = (s: state, instruction: int) => {
+  let {cpu} = s;
+  let pc = cpu.registers.pc;
+  let sp = cpu.registers.sp;
+
+  let d: debug = {instruction, pc, sp};
+  let {debugInstructions} = s;
+  let debugInstructions = [d, ...debugInstructions];
+  let debugInstructions =
+    Belt.List.take(debugInstructions, 50)
+    ->Belt.Option.getWithDefault(debugInstructions);
+
+  {...s, debugInstructions};
+};
+
 let rec execInstructionsForFrame = (s: state, currCycles: int, maxCycles: int) => {
   let (instruction, mmu) =
     Mmu.read8(Cpu.programCount(s.cpu), {gpu: s.gpu, mmu: s.mmu});
@@ -39,8 +62,8 @@ let rec execInstructionsForFrame = (s: state, currCycles: int, maxCycles: int) =
   s.cpu.registers.pc = (Cpu.programCount(s.cpu) + 1) land 0xffff;
 
   /* execute next instruction */
-  let {cpu, mmu}: Cpu.Ops.state =
-    Cpu.exec(instruction, {mmu, gpu: s.gpu, cpu: s.cpu});
+  let {cpu, mmu}: Cpu_types.state =
+    Cpu_ops.exec(instruction, {mmu, gpu: s.gpu, cpu: s.cpu});
 
   if (cpu.registers.mCycles <= 0) {
     raise(NoCycles(Printf.sprintf("mCycles=0: %x", instruction)));
@@ -53,6 +76,8 @@ let rec execInstructionsForFrame = (s: state, currCycles: int, maxCycles: int) =
   s.cpu = cpu;
   /* update timer  */
   s.cpu.clock = s.cpu.clock + cpu.registers.mCycles;
+
+  // let s = addInstructionToDebug(s, instruction);
 
   if (currCycles >= maxCycles) {
     s;
