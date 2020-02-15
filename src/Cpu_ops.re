@@ -6,7 +6,30 @@ open Cpu_types;
 module Ops = {
   open Cpu;
 
-  let nop: op = (s: state) => newState(~cpu=machineCycles(1, s.cpu), s);
+  let nop: op =
+    (s: state) => {
+      newState(~cpu=machineCycles(1, s.cpu), s);
+    };
+
+  let halt: op =
+    ({cpu} as s: state) => {
+      cpu.halt = 1;
+      newState(~cpu=machineCycles(1, cpu), s);
+    };
+
+  module Interrupts = {
+    let di: op =
+      ({cpu} as s: state) => {
+        cpu.ime = 0;
+        newState(~cpu=machineCycles(1, cpu), s);
+      };
+
+    let ei: op =
+      ({cpu} as s: state) => {
+        cpu.ime = 1;
+        newState(~cpu=machineCycles(1, cpu), s);
+      };
+  };
 
   module Load_nn_8 = {
     let load_nn_8 = (register, {cpu, mmu, gpu} as s) => {
@@ -16,12 +39,12 @@ module Ops = {
         switch (register) {
         | A => raise(AssertionException("No ld_a_n instruction"))
         | F => raise(AssertionException("No ld_f_n instruction"))
-        | B => cpu |> setRegisters(~b=value) |> machineCycles(2)
-        | C => cpu |> setRegisters(~c=value) |> machineCycles(2)
-        | D => cpu |> setRegisters(~d=value) |> machineCycles(2)
-        | E => cpu |> setRegisters(~e=value) |> machineCycles(2)
-        | H => cpu |> setRegisters(~h=value) |> machineCycles(2)
-        | L => cpu |> setRegisters(~l=value) |> machineCycles(2)
+        | B
+        | C
+        | D
+        | E
+        | H
+        | L => cpu |> writeRegister8(register, value) |> machineCycles(2)
         };
       newState(~cpu, ~mmu=m, s);
     };
@@ -338,11 +361,13 @@ module Ops = {
     let ld_hl_nn: op =
       s => {
         let (h, l, m, cpu) = ld_n_nn(s);
+        Printf.printf("LD HL nn: %x %x\n", h, l);
         newState(~cpu=cpu |> setRegisters(~h, ~l), ~mmu=m, s);
       };
     let ld_sp_nn: op =
       ({cpu, mmu, gpu} as s) => {
         let (sp, mmu) = Mmu.read16(programCount(cpu), {gpu, mmu});
+        Printf.printf("LD SP nn: %x\n", sp);
         newState(
           ~cpu=cpu |> setSp(sp) |> machineCycles(3) |> incrementPc(2),
           ~mmu,
@@ -791,6 +816,18 @@ module Ops = {
     let rlc = (cpu, ~mCycles=1, register) => {
       let highBit = register land 0b10000000 > 0 ? 1 : 0;
       let r = (register lsl 1 + highBit) land 255;
+      (
+        r,
+        cpu
+        |> machineCycles(mCycles)
+        |> setFlag(Flags.C, highBit)
+        |> setFlag(Z, b2i(r === 0)),
+      );
+    };
+    let rl = (cpu, ~mCycles=1, register) => {
+      let highBit = register land 0b10000000 > 0 ? 1 : 0;
+      let carry = cpu |> getFlag(C) > 0 ? 1 : 0;
+      let r = (register lsl 1 + carry) land 255;
       (r, cpu |> machineCycles(mCycles) |> setFlag(Flags.C, highBit));
     };
     /* 07: RLCA */
@@ -830,20 +867,24 @@ module Ops = {
         newState(~cpu=cpu |> setRegisters(~l), s);
       };
     /* 0F */
-    let rrca: op =
-      ({cpu} as s) => {
-        newState(~cpu=cpu |> machineCycles(1), s);
-      };
+    // let rrca: op =
+    //   ({cpu} as s) => {
+    //     newState(~cpu=cpu |> machineCycles(1), s);
+    //   };
     /* 17 */
     let rla: op =
       ({cpu} as s) => {
-        newState(~cpu=cpu |> machineCycles(1), s);
+        let (a, cpu) = rl(cpu, cpu.registers.a);
+        newState(
+          ~cpu=cpu |> wA(a) |> setFlag(Z, 0) |> machineCycles(1),
+          s,
+        );
       };
-    /* 1F */
-    let rra: op =
-      ({cpu} as s) => {
-        newState(~cpu=cpu |> machineCycles(1), s);
-      };
+    // /* 1F */
+    // let rra: op =
+    //   ({cpu} as s) => {
+    //     newState(~cpu=cpu |> machineCycles(1), s);
+    //   };
   };
 
   module Or = {
@@ -922,6 +963,7 @@ module Ops = {
     };
     let xor_a: op =
       ({cpu} as s) => {
+        Printf.printf("XOR A\n");
         let cpu = xor_(cpu, cpu.registers.a);
         newState(~cpu=cpu |> machineCycles(1), s);
       };
@@ -1478,6 +1520,7 @@ module Ops = {
         // Z80._r.f&=0xEF;
         // if((Z80._r.f&0x20)||(a>0x99)) { Z80._r.a+=0x60; Z80._r.f|=0x10; }
         // Z80._r.m=1;
+        Js.log("DAA");
         let {a, f} = cpu.registers;
         let a =
           if (f land 0x20 !== 0 || a land 0xf > 9) {
@@ -1783,18 +1826,96 @@ module Ops = {
 
   module Rst = {};
 
+  module CbOps = Cpu_cbops;
   module Swap = Cpu_cbops.Swap;
 
   module Cb = {
     let cb_exec: op =
       ({cpu, mmu, gpu}) => {
         let (pc, cpu) = readAndIncrementPc(cpu);
-        let (nextInstr, mmu) = Mmu.read8(pc, {mmu, gpu});
+        let (nextInstr, mmu) = Mmu.read8(pc land 0xffff, {mmu, gpu});
         let cbop =
           switch (nextInstr) {
+          | 0x10 => CbOps.Rl.rl_b
+          | 0x11 => CbOps.Rl.rl_c
+          | 0x12 => CbOps.Rl.rl_d
+          | 0x13 => CbOps.Rl.rl_e
+          | 0x14 => CbOps.Rl.rl_h
+          | 0x15 => CbOps.Rl.rl_l
+          | 0x16 => CbOps.Rl.rl_m_hl
+          | 0x17 => CbOps.Rl.rl_a
           | 0x30 => Swap.swap_b
           | 0x37 => Swap.swap_a
-          | _ => nop
+          | 0x40 => CbOps.Bit.Bit0.bit_b
+          | 0x41 => CbOps.Bit.Bit0.bit_c
+          | 0x42 => CbOps.Bit.Bit0.bit_d
+          | 0x43 => CbOps.Bit.Bit0.bit_e
+          | 0x44 => CbOps.Bit.Bit0.bit_h
+          | 0x45 => CbOps.Bit.Bit0.bit_l
+          | 0x46 => CbOps.Bit.Bit0.bit_m_hl
+          | 0x47 => CbOps.Bit.Bit0.bit_a
+          | 0x48 => CbOps.Bit.Bit1.bit_b
+          | 0x49 => CbOps.Bit.Bit1.bit_c
+          | 0x4A => CbOps.Bit.Bit1.bit_d
+          | 0x4B => CbOps.Bit.Bit1.bit_e
+          | 0x4C => CbOps.Bit.Bit1.bit_h
+          | 0x4D => CbOps.Bit.Bit1.bit_l
+          | 0x4E => CbOps.Bit.Bit1.bit_m_hl
+          | 0x4F => CbOps.Bit.Bit1.bit_a
+          | 0x50 => CbOps.Bit.Bit2.bit_b
+          | 0x51 => CbOps.Bit.Bit2.bit_c
+          | 0x52 => CbOps.Bit.Bit2.bit_d
+          | 0x53 => CbOps.Bit.Bit2.bit_e
+          | 0x54 => CbOps.Bit.Bit2.bit_h
+          | 0x55 => CbOps.Bit.Bit2.bit_l
+          | 0x56 => CbOps.Bit.Bit2.bit_m_hl
+          | 0x57 => CbOps.Bit.Bit2.bit_a
+          | 0x58 => CbOps.Bit.Bit3.bit_b
+          | 0x59 => CbOps.Bit.Bit3.bit_c
+          | 0x5A => CbOps.Bit.Bit3.bit_d
+          | 0x5B => CbOps.Bit.Bit3.bit_e
+          | 0x5C => CbOps.Bit.Bit3.bit_h
+          | 0x5D => CbOps.Bit.Bit3.bit_l
+          | 0x5E => CbOps.Bit.Bit3.bit_m_hl
+          | 0x5F => CbOps.Bit.Bit3.bit_a
+          | 0x60 => CbOps.Bit.Bit4.bit_b
+          | 0x61 => CbOps.Bit.Bit4.bit_c
+          | 0x62 => CbOps.Bit.Bit4.bit_d
+          | 0x63 => CbOps.Bit.Bit4.bit_e
+          | 0x64 => CbOps.Bit.Bit4.bit_h
+          | 0x65 => CbOps.Bit.Bit4.bit_l
+          | 0x66 => CbOps.Bit.Bit4.bit_m_hl
+          | 0x67 => CbOps.Bit.Bit4.bit_a
+          | 0x68 => CbOps.Bit.Bit5.bit_b
+          | 0x69 => CbOps.Bit.Bit5.bit_c
+          | 0x6A => CbOps.Bit.Bit5.bit_d
+          | 0x6B => CbOps.Bit.Bit5.bit_e
+          | 0x6C => CbOps.Bit.Bit5.bit_h
+          | 0x6D => CbOps.Bit.Bit5.bit_l
+          | 0x6E => CbOps.Bit.Bit5.bit_m_hl
+          | 0x6F => CbOps.Bit.Bit5.bit_a
+          | 0x70 => CbOps.Bit.Bit6.bit_b
+          | 0x71 => CbOps.Bit.Bit6.bit_c
+          | 0x72 => CbOps.Bit.Bit6.bit_d
+          | 0x73 => CbOps.Bit.Bit6.bit_e
+          | 0x74 => CbOps.Bit.Bit6.bit_h
+          | 0x75 => CbOps.Bit.Bit6.bit_l
+          | 0x76 => CbOps.Bit.Bit6.bit_m_hl
+          | 0x77 => CbOps.Bit.Bit6.bit_a
+          | 0x78 => CbOps.Bit.Bit7.bit_b
+          | 0x79 => CbOps.Bit.Bit7.bit_c
+          | 0x7A => CbOps.Bit.Bit7.bit_d
+          | 0x7B => CbOps.Bit.Bit7.bit_e
+          | 0x7C => CbOps.Bit.Bit7.bit_h
+          | 0x7D => CbOps.Bit.Bit7.bit_l
+          | 0x7E => CbOps.Bit.Bit7.bit_m_hl
+          | 0x7F => CbOps.Bit.Bit7.bit_a
+          | _ =>
+            raise(
+              Cpu.UnhandledInstruction(
+                Printf.sprintf("Unhandled instruction, CB %x", nextInstr),
+              ),
+            )
           };
         cbop({cpu, mmu, gpu});
       };
@@ -1819,8 +1940,11 @@ let exec: int => op =
     | 0x0C => Ops.Increment8.inc_c
     | 0x0D => Ops.Decrement8.dec_c
     | 0x0E => Ops.Load_nn_8.ld_c_n
-    | 0x0F => Ops.Rotation.rrca
-    | 0x10 => Ops.nop
+    // | 0x0F => Ops.Rotation.rrca
+    /* | 0x10 => (s) => {
+         Js.log("STOP");
+         s
+       } */
     | 0x11 => Ops.Load_nn_16.ld_de_nn
     | 0x12 => Ops.Load_8_A.ld_m_de_a
     | 0x13 => Ops.Increment16.inc_de
@@ -1835,7 +1959,7 @@ let exec: int => op =
     | 0x1C => Ops.Increment8.inc_e
     | 0x1D => Ops.Decrement8.dec_e
     | 0x1E => Ops.Load_nn_8.ld_e_n
-    | 0x1F => Ops.Rotation.rra
+    // | 0x1F => Ops.Rotation.rra
     | 0x20 => Ops.Jump.jr_nz_n
     | 0x21 => Ops.Load_nn_16.ld_hl_nn
     | 0x22 => Ops.Load_8_A.ld_hli_a
@@ -1856,7 +1980,7 @@ let exec: int => op =
     | 0x31 => Ops.Load_nn_16.ld_sp_nn
     | 0x32 => Ops.Load_8_A.ld_hld_a
     | 0x33 => Ops.Increment16.inc_sp
-    | 0x34 => Ops.nop
+    // | 0x34 => Ops.nop
     | 0x35 => Ops.Decrement8.dec_m_hl
     | 0x36 => Ops.Load_r1_r2.ld_m_hl_n
     | 0x37 => Ops.Misc.scf
@@ -2003,63 +2127,63 @@ let exec: int => op =
     | 0xC4 => Ops.Call.call_nz_nn
     | 0xC5 => Ops.Push.push_bc
     | 0xC6 => Ops.Add.add_a_n
-    | 0xC7 => Ops.nop
+    /* | 0xC7 => Ops.nop */
     | 0xC8 => Ops.Ret.ret_z
     | 0xC9 => Ops.Ret.ret
     | 0xCA => Ops.Jump.jp_z_nn
     | 0xCB => Ops.Cb.cb_exec
-    | 0xCC => Ops.nop
+    /* | 0xCC => Ops.nop */
     | 0xCD => Ops.Call.call_nn
     | 0xCE => Ops.Add.adc_a_n
-    | 0xCF => Ops.nop
+    /* | 0xCF => Ops.nop */
     | 0xD0 => Ops.Ret.ret_nc
     | 0xD1 => Ops.Pop.pop_de
     | 0xD2 => Ops.Jump.jp_nc_nn
-    | 0xD3 => Ops.nop
-    | 0xD4 => Ops.nop
+    /* | 0xD3 => Ops.nop
+       | 0xD4 => Ops.nop */
     | 0xD5 => Ops.Push.push_de
     | 0xD6 => Ops.Sub.sub_n
-    | 0xD7 => Ops.nop
+    /* | 0xD7 => Ops.nop */
     | 0xD8 => Ops.Ret.ret_c
-    | 0xD9 => Ops.nop
+    /* | 0xD9 => Ops.nop */
     | 0xDA => Ops.Jump.jp_c_nn
-    | 0xDB => Ops.nop
-    | 0xDC => Ops.nop
-    | 0xDD => Ops.nop
-    | 0xDE => Ops.nop
-    | 0xDF => Ops.nop
+    /* | 0xDB => Ops.nop
+       | 0xDC => Ops.nop
+       | 0xDD => Ops.nop
+       | 0xDE => Ops.nop
+       | 0xDF => Ops.nop */
     | 0xE0 => Ops.Load_8_A.ldh_n_a
     | 0xE1 => Ops.Pop.pop_hl
     | 0xE2 => Ops.Load_8_A.ld_m_c_a
-    | 0xE3 => Ops.nop
-    | 0xE4 => Ops.nop
+    /* | 0xE3 => Ops.nop
+       | 0xE4 => Ops.nop */
     | 0xE5 => Ops.Push.push_hl
     | 0xE6 => Ops.And.and_n
-    | 0xE7 => Ops.nop
+    /* | 0xE7 => Ops.nop */
     | 0xE8 => Ops.Add_16.add_sp_n
     | 0xE9 => Ops.Jump.jp_m_hl
     | 0xEA => Ops.Load_8_A.ld_m_nn_a
-    | 0xEB => Ops.nop
-    | 0xEC => Ops.nop
-    | 0xED => Ops.nop
+    /* | 0xEB => Ops.nop
+       | 0xEC => Ops.nop
+       | 0xED => Ops.nop */
     | 0xEE => Ops.Xor.xor_n
-    | 0xEF => Ops.nop
+    /* | 0xEF => Ops.nop */
     | 0xF0 => Ops.Load_A_8.ldh_a_n
     | 0xF1 => Ops.Pop.pop_af
     | 0xF2 => Ops.Load_A_8.ld_a_m_c
-    | 0xF3 => Ops.nop
-    | 0xF4 => Ops.nop
+    | 0xF3 => Ops.Interrupts.di
+    /* | 0xF4 => Ops.nop  */
     | 0xF5 => Ops.Push.push_af
     | 0xF6 => Ops.Or.or_n
-    | 0xF7 => Ops.nop
+    /* | 0xF7 => Ops.nop */
     | 0xF8 => Ops.Load_nn_16.ld_hl_sp_n
     | 0xF9 => Ops.Load_nn_16.ld_sp_hl
     | 0xFA => Ops.Load_A_8.ld_a_m_nn
-    | 0xFB => Ops.nop
-    | 0xFC => Ops.nop
-    | 0xFD => Ops.nop
+    | 0xFB => Ops.Interrupts.ei
+    /*   | 0xFC => Ops.nop
+         | 0xFD => Ops.nop */
     | 0xFE => Ops.Cp.cp_n
-    | 0xFF => Ops.nop
+    /* | 0xFF => Ops.nop */
     | _ =>
       raise(
         Cpu.UnhandledInstruction(
