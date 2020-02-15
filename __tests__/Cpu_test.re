@@ -3,9 +3,7 @@ open Jest;
 describe("Cpu", () => {
   open Expect;
 
-  let initialValues = () => {
-    (Mmu.load(Array.make(4096, 0)), Gpu.make());
-  };
+  let initialValues = () => (Mmu.load(Array.make(4096, 0)), Gpu.make());
 
   describe("Signed", () => {
     testAll(
@@ -30,7 +28,13 @@ describe("Cpu", () => {
     describe("Increment", () => {
       let makeState = (~a=0, ~b=0, ~c=0, ~d=0, ~e=0, ()) => {
         let cpu = Cpu.make();
-        let cpu = cpu |> Cpu.setRegisters(~a, ~b, ~c, ~d, ~e);
+        let cpu =
+          cpu
+          |> Cpu.wA(a)
+          |> Cpu.wB(b)
+          |> Cpu.wC(c)
+          |> Cpu.wD(d)
+          |> Cpu.wE(e);
         let mmu = Mmu.load(Array.make(4096, 0));
         let gpu = Gpu.make();
         (cpu, mmu, gpu);
@@ -68,7 +72,7 @@ describe("Cpu", () => {
         |> toEqual((256, 0x1, 0x0));
       });
       test("INC DE", () => {
-        let cpu = Cpu.make() |> Cpu.setRegisters(~e=255);
+        let cpu = Cpu.make() |> Cpu.wE(255);
         let mmu = Mmu.load(Array.make(4096, 0));
         let gpu = Gpu.make();
         let cpu1 = Cpu_ops.Ops.Increment16.inc_de({mmu, gpu, cpu}).cpu;
@@ -76,7 +80,7 @@ describe("Cpu", () => {
         |> toEqual((256, 0x1, 0x0));
       });
       test("INC HL", () => {
-        let cpu = Cpu.make() |> Cpu.setRegisters(~l=255);
+        let cpu = Cpu.make() |> Cpu.wL(255);
         let mmu = Mmu.load(Array.make(4096, 0));
         let gpu = Gpu.make();
         let cpu1 = Cpu_ops.Ops.Increment16.inc_hl({mmu, gpu, cpu}).cpu;
@@ -87,7 +91,7 @@ describe("Cpu", () => {
 
     describe("Decrement", () => {
       test("DEC BC", () => {
-        let cpu = Cpu.make() |> Cpu.setRegisters(~b=1, ~c=0);
+        let cpu = Cpu.make() |> Cpu.wB(1) |> Cpu.wC(0);
         let mmu = Mmu.load(Array.make(4096, 0));
         let gpu = Gpu.make();
         let cpu1 = Cpu_ops.Ops.Decrement16.dec_bc({mmu, gpu, cpu}).cpu;
@@ -95,7 +99,7 @@ describe("Cpu", () => {
         |> toEqual((255, 0x0, 0xff));
       });
       test("DEC DE", () => {
-        let cpu = Cpu.make() |> Cpu.setRegisters(~d=1, ~e=0);
+        let cpu = Cpu.make() |> Cpu.wD(1) |> Cpu.wE(0);
         let mmu = Mmu.load(Array.make(4096, 0));
         let gpu = Gpu.make();
         let cpu1 = Cpu_ops.Ops.Decrement16.dec_de({mmu, gpu, cpu}).cpu;
@@ -103,7 +107,7 @@ describe("Cpu", () => {
         |> toEqual((255, 0x0, 0xff));
       });
       test("DEC HL", () => {
-        let cpu = Cpu.make() |> Cpu.setRegisters(~h=1, ~l=0);
+        let cpu = Cpu.make() |> Cpu.wH(1) |> Cpu.wL(0);
         let mmu = Mmu.load(Array.make(4096, 0));
         let gpu = Gpu.make();
         let cpu1 = Cpu_ops.Ops.Decrement16.dec_hl({mmu, gpu, cpu}).cpu;
@@ -114,7 +118,8 @@ describe("Cpu", () => {
 
     describe("Add", () => {
       test("updates the register", () => {
-        let cpu = Cpu.make() |> Cpu.setRegisters(~h=1, ~l=0, ~b=2, ~c=0xdc);
+        let cpu =
+          Cpu.make() |> Cpu.wH(1) |> Cpu.wL(0) |> Cpu.wB(2) |> Cpu.wC(0xdc);
         let mmu = Mmu.load(Array.make(4096, 0));
         let gpu = Gpu.make();
 
@@ -237,21 +242,21 @@ describe("Cpu", () => {
 
       test("A", () => {
         let (mmu, gpu) = initialValues();
-        let cpu = Cpu.make() |> Cpu.setRegisters(~a);
+        let cpu = Cpu.make() |> Cpu.wA(a);
         let cpu1 = Cpu_ops.Ops.And.and_a({cpu, mmu, gpu}).cpu;
 
         expect(cpu1.registers.a) |> toBe(a land a);
       });
       test("B", () => {
         let (mmu, gpu) = initialValues();
-        let cpu = Cpu.make() |> Cpu.setRegisters(~a, ~b);
+        let cpu = Cpu.make() |> Cpu.wA(a) |> Cpu.wB(b);
         let cpu1 = Cpu_ops.Ops.And.and_b({cpu, mmu, gpu}).cpu;
 
         expect(cpu1.registers.a) |> toBe(a land b);
       });
       test("C", () => {
         let (mmu, gpu) = initialValues();
-        let cpu = Cpu.make() |> Cpu.setRegisters(~a, ~c=b);
+        let cpu = Cpu.make() |> Cpu.wA(a) |> Cpu.wC(b);
         let cpu1 = Cpu_ops.Ops.And.and_c({cpu, mmu, gpu}).cpu;
 
         expect(cpu1.registers.a) |> toBe(a land b);
@@ -293,13 +298,13 @@ describe("Cpu", () => {
     describe("Swap", () => {
       test("A", () => {
         let (mmu, gpu) = initialValues();
-        let cpu = Cpu.make() |> Cpu.setRegisters(~a=0b11110000);
+        let cpu = Cpu.make() |> Cpu.wA(0b11110000);
         let cpu = Cpu_ops.Ops.Swap.swap_a({cpu, mmu, gpu}).cpu;
         expect(cpu.registers.a) |> toBe(0b00001111);
       });
       test("B", () => {
         let (mmu, gpu) = initialValues();
-        let cpu = Cpu.make() |> Cpu.setRegisters(~b=0b11110010);
+        let cpu = Cpu.make() |> Cpu.wB(0b11110010);
         let cpu = Cpu_ops.Ops.Swap.swap_b({cpu, mmu, gpu}).cpu;
         expect(cpu.registers.b) |> toBe(0b00101111);
       });
@@ -313,7 +318,7 @@ describe("Cpu", () => {
         (0b00000001, 0b00000010, 0b00000000),
       ],
       ((input, expected, carry)) => {
-        let cpu = Cpu.make() |> Cpu.setRegisters(~a=input);
+        let cpu = Cpu.make() |> Cpu.wA(input);
         let mmu = Mmu.load(Array.make(4096, 0));
         let gpu = Gpu.make();
         let cpu1 = Cpu_ops.Ops.Rotation.rlca({cpu, mmu, gpu}).cpu;
@@ -321,5 +326,86 @@ describe("Cpu", () => {
         |> toEqual((expected, carry));
       },
     );
+    testAll(
+      "RLA",
+      [
+        (0b10001000, 1, 0b00010001, 0b00010000),
+        (0b10001000, 0, 0b00010000, 0b00010000),
+        (0b11111111, 0, 0b11111110, 0b00010000),
+        (0b00000001, 0, 0b00000010, 0b00000000),
+        (0b00000000, 0, 0b00000000, 0b00000000),
+      ],
+      ((input, inputCarry, expected, carry)) => {
+        let cpu =
+          Cpu.make() |> Cpu.wA(input) |> Cpu.setFlag(Cpu.Flags.C, inputCarry);
+        let mmu = Mmu.load(Array.make(4096, 0));
+        let gpu = Gpu.make();
+        let cpu1 = Cpu_ops.Ops.Rotation.rla({cpu, mmu, gpu}).cpu;
+        expect((
+          cpu1.registers.a,
+          Cpu.getFlag(Cpu.Flags.C, cpu1),
+          Cpu.getFlag(Cpu.Flags.Z, cpu1),
+        ))
+        |> toEqual((expected, carry, 0));
+      },
+    );
+    testAll(
+      "RL n",
+      [
+        (0b10001000, 1, 0b00010001, 0b00010000, 0b00000000),
+        (0b10001000, 0, 0b00010000, 0b00010000, 0b00000000),
+        (0b11111111, 0, 0b11111110, 0b00010000, 0b00000000),
+        (0b00000001, 0, 0b00000010, 0b00000000, 0b00000000),
+        (0b00000000, 0, 0b00000000, 0b00000000, 0b10000000),
+      ],
+      ((input, inputCarry, expected, carry, z)) => {
+        let cpu =
+          Cpu.make() |> Cpu.wA(input) |> Cpu.setFlag(Cpu.Flags.C, inputCarry);
+        let mmu = Mmu.load(Array.make(4096, 0));
+        let gpu = Gpu.make();
+        let cpu1 = Cpu_cbops.Rl.rl_a({cpu, mmu, gpu}).cpu;
+        expect((
+          cpu1.registers.a,
+          Cpu.getFlag(Cpu.Flags.C, cpu1),
+          Cpu.getFlag(Cpu.Flags.Z, cpu1),
+        ))
+        |> toEqual((expected, carry, z));
+      },
+    );
+
+    describe("Bit", () => {
+      testAll(
+        "Bit0a",
+        [(0b10001001, 0b10000000), (0b10001000, 0b00000000)],
+        ((input, expected)) => {
+          let cpu = Cpu.make() |> Cpu.wA(input);
+          let mmu = Mmu.load(Array.make(4096, 0));
+          let gpu = Gpu.make();
+          let cpu1 = Cpu_cbops.Bit.Bit0.bit_a({cpu, mmu, gpu}).cpu;
+          expect((
+            Cpu.getFlag(Cpu.Flags.Z, cpu1),
+            Cpu.getFlag(Cpu.Flags.N, cpu1),
+            Cpu.getFlag(Cpu.Flags.H, cpu1),
+          ))
+          |> toEqual((expected, 0, 0b00100000));
+        },
+      );
+      testAll(
+        "Bit1a",
+        [(0b10001000, 0b00000000), (0b10001010, 0b10000000)],
+        ((input, expected)) => {
+          let cpu = Cpu.make() |> Cpu.wA(input);
+          let mmu = Mmu.load(Array.make(4096, 0));
+          let gpu = Gpu.make();
+          let cpu1 = Cpu_cbops.Bit.Bit1.bit_a({cpu, mmu, gpu}).cpu;
+          expect((
+            Cpu.getFlag(Cpu.Flags.Z, cpu1),
+            Cpu.getFlag(Cpu.Flags.N, cpu1),
+            Cpu.getFlag(Cpu.Flags.H, cpu1),
+          ))
+          |> toEqual((expected, 0, 0b00100000));
+        },
+      );
+    });
   });
 });

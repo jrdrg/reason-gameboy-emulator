@@ -66,12 +66,15 @@ type registers = {
 type t = {
   mutable clock: int,
   mutable halt: int,
+  // interrupt master enable
+  mutable ime: int,
   registers,
 };
 
 let make = () => {
   clock: 0,
   halt: 0,
+  ime: 0,
   registers: {
     a: 0,
     b: 0,
@@ -147,6 +150,47 @@ let setRegisters = (~a=?, ~b=?, ~c=?, ~d=?, ~e=?, ~h=?, ~l=?, ~f=?, cpu) => {
   cpu;
 };
 
+let writeRegister8 = (register: register8, value: int, cpu: t) => {
+  if (value > 0xff) {
+    raise(AssertionException(Printf.sprintf("writeRegister8 %d", value)));
+  };
+  switch (register) {
+  | A =>
+    cpu.registers.a = value;
+    cpu;
+  | B =>
+    cpu.registers.b = value;
+    cpu;
+  | C =>
+    cpu.registers.c = value;
+    cpu;
+  | D =>
+    cpu.registers.d = value;
+    cpu;
+  | E =>
+    cpu.registers.e = value;
+    cpu;
+  | F =>
+    cpu.registers.f = value;
+    cpu;
+  | H =>
+    cpu.registers.h = value;
+    cpu;
+  | L =>
+    cpu.registers.l = value;
+    cpu;
+  };
+};
+
+let wA = writeRegister8(A);
+let wB = writeRegister8(B);
+let wC = writeRegister8(C);
+let wD = writeRegister8(D);
+let wE = writeRegister8(E);
+let wF = writeRegister8(F);
+let wH = writeRegister8(H);
+let wL = writeRegister8(L);
+
 let writeRegister16 = (register: register16, value: int, cpu: t) => {
   if (value > 0xffff) {
     raise(AssertionException(Printf.sprintf("writeRegister16 %d", value)));
@@ -157,16 +201,16 @@ let writeRegister16 = (register: register16, value: int, cpu: t) => {
   switch (register) {
   | AF =>
     let (a, f) = (r1, r2);
-    cpu |> setRegisters(~a, ~f);
+    cpu |> wA(a) |> wF(f);
   | BC =>
     let (b, c) = (r1, r2);
-    cpu |> setRegisters(~b, ~c);
+    cpu |> wB(b) |> wC(c);
   | DE =>
     let (d, e) = (r1, r2);
-    cpu |> setRegisters(~d, ~e);
+    cpu |> wD(d) |> wE(e);
   | HL =>
     let (h, l) = (r1, r2);
-    cpu |> setRegisters(~h, ~l);
+    cpu |> wH(h) |> wL(l);
   };
 };
 
@@ -227,7 +271,7 @@ let toggleFlag = (flag, cpu) => {
       0;
     };
   let f = Flags.setFlag(flag, flagValue, cpu.registers.f);
-  cpu |> setRegisters(~f);
+  cpu |> wF(f);
 };
 
 let machineCycles = (cycles: int, cpu: t) => {
@@ -247,7 +291,7 @@ let incrementHl = (cpu: t): t => {
     } else {
       cpu.registers.h;
     };
-  cpu |> setRegisters(~h, ~l);
+  cpu |> wH(h) |> wL(l);
 };
 
 let decrementHl = (cpu: t): t => {
@@ -258,7 +302,7 @@ let decrementHl = (cpu: t): t => {
     } else {
       cpu.registers.h;
     };
-  cpu |> setRegisters(~h, ~l);
+  cpu |> wH(h) |> wL(l);
 };
 
 let signed = (value: int): int =>
