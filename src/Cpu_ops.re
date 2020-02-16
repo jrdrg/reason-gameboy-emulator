@@ -361,13 +361,13 @@ module Ops = {
     let ld_hl_nn: op =
       s => {
         let (h, l, m, cpu) = ld_n_nn(s);
-        Printf.printf("LD HL nn: %x %x\n", h, l);
-        newState(~cpu=cpu |> setRegisters(~h, ~l), ~mmu=m, s);
+        // Printf.printf("LD HL nn: %x %x\n", h, l);
+        newState(~cpu=cpu |> wH(h) |> wL(l), ~mmu=m, s);
       };
     let ld_sp_nn: op =
       ({cpu, mmu, gpu} as s) => {
         let (sp, mmu) = Mmu.read16(programCount(cpu), {gpu, mmu});
-        Printf.printf("LD SP nn: %x\n", sp);
+        // Printf.printf("LD SP nn: %x\n", sp);
         newState(
           ~cpu=cpu |> setSp(sp) |> machineCycles(3) |> incrementPc(2),
           ~mmu,
@@ -963,7 +963,7 @@ module Ops = {
     };
     let xor_a: op =
       ({cpu} as s) => {
-        Printf.printf("XOR A\n");
+        // Printf.printf("XOR A\n");
         let cpu = xor_(cpu, cpu.registers.a);
         newState(~cpu=cpu |> machineCycles(1), s);
       };
@@ -1679,11 +1679,8 @@ module Ops = {
           } else {
             (pc + 1, 2);
           };
-        newState(
-          ~cpu=cpu |> incrementPc(pc) |> machineCycles(mCycles),
-          ~mmu,
-          s,
-        );
+        Printf.printf("JRNZ %4x, pc=%4x\n", n, pc);
+        newState(~cpu=cpu |> setPc(pc) |> machineCycles(mCycles), ~mmu, s);
       };
     let jr_z_n: op =
       ({cpu, mmu, gpu} as s) => {

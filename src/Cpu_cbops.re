@@ -39,11 +39,11 @@ module Swap = {
 };
 
 module Bit = {
-  let bit_ = (cpu, s, ~cycles=2, isSet) => {
+  let bit_ = (cpu, s, ~cycles=2, isSet: bool) => {
     newState(
       ~cpu=
         cpu
-        |> setFlag(Z, isSet)
+        |> setFlag(Z, b2i(isSet))
         |> setFlag(N, 0)
         |> setFlag(H, 1)
         |> machineCycles(cycles),
@@ -55,29 +55,29 @@ module Bit = {
 
   module BitOps = (B: BitOffset) => {
     let bit_a = ({cpu} as s) => {
-      bit_(cpu, s, cpu.registers.a land B.offset);
+      bit_(cpu, s, cpu.registers.a land B.offset === 0);
     };
     let bit_b = ({cpu} as s) => {
-      bit_(cpu, s, cpu.registers.b land B.offset);
+      bit_(cpu, s, cpu.registers.b land B.offset === 0);
     };
     let bit_c = ({cpu} as s) => {
-      bit_(cpu, s, cpu.registers.c land B.offset);
+      bit_(cpu, s, cpu.registers.c land B.offset === 0);
     };
     let bit_d = ({cpu} as s) => {
-      bit_(cpu, s, cpu.registers.d land B.offset);
+      bit_(cpu, s, cpu.registers.d land B.offset === 0);
     };
     let bit_e = ({cpu} as s) => {
-      bit_(cpu, s, cpu.registers.e land B.offset);
+      bit_(cpu, s, cpu.registers.e land B.offset === 0);
     };
     let bit_h = ({cpu} as s) => {
-      bit_(cpu, s, cpu.registers.h land B.offset);
+      bit_(cpu, s, cpu.registers.h land B.offset === 0);
     };
     let bit_l = ({cpu} as s) => {
-      bit_(cpu, s, cpu.registers.l land B.offset);
+      bit_(cpu, s, cpu.registers.l land B.offset === 0);
     };
     let bit_m_hl = ({cpu, mmu, gpu} as s) => {
       let (hl, mmu) = Mmu.read8(rHl(cpu), {mmu, gpu});
-      newState(~mmu, bit_(~cycles=4, cpu, s, hl land B.offset));
+      newState(~mmu, bit_(~cycles=4, cpu, s, hl land B.offset === 0));
     };
   };
   // RLA:   function() { var ci=Z80._r.f&0x10?1:0; var co=Z80._r.a&0x80?0x10:0; Z80._r.a=(Z80._r.a<<1)+ci; Z80._r.a&=255;                             Z80._r.f=(Z80._r.f&0xEF)+co; Z80._r.m=1; },
@@ -214,11 +214,11 @@ module Res = {
         let l = cpu.registers.l land R.offset;
         newState(~cpu=cpu |> wL(l) |> machineCycles(2), s);
       };
-    let res_m_hl: op =
-      ({cpu, mmu, gpu} as s) => {
-        let hl = Mmu.read8;
-        // let l = cpu.registers.l land R.offset;
-        newState(~cpu=cpu |> wL(l) |> machineCycles(2), s);
-      };
+    // let res_m_hl: op =
+    //   ({cpu, mmu, gpu} as s) => {
+    //     let hl = Mmu.read8;
+    //     let l = cpu.registers.l land R.offset;
+    //     newState(~cpu=cpu |> wL(l) |> machineCycles(2), s);
+    //   };
   };
 };
