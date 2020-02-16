@@ -16,6 +16,8 @@ https://gekkio.fi/files/gb-docs/gbctr.pdf
 
 http://www.devrs.com/gb/files/opcodes.html
 
+https://realboyemulator.wordpress.com/2013/01/03/a-look-at-the-game-boy-bootstrap-let-the-fun-begin/
+
 ## Run Project
 
 ```sh
