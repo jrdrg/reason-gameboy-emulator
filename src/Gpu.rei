@@ -19,6 +19,6 @@ let updateTile: (int, t) => unit;
 
 let step: (int, Renderer.t, t) => t;
 
-let read8: t => int;
+let read8: (int, t) => int;
 
-let write8: t => t;
+let write8: (int, int, t) => t;

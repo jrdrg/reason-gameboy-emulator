@@ -1,3 +1,5 @@
+exception NotImplemented(string);
+
 let screen_width = 160;
 let screen_height = 144;
 
@@ -91,6 +93,9 @@ let getTile = (index: int, gpu: t): int => {
   gpu.bgtile == 1 && tile < 128 ? tile + 256 : tile;
 };
 
+/**
+ * Renders a single scan line.
+ */
 let renderScan = (renderer: Renderer.t, gpu: t): t => {
   open Belt;
   /* TODO: move this into GPU.t */
@@ -166,6 +171,10 @@ let renderScan = (renderer: Renderer.t, gpu: t): t => {
   gpu;
 };
 
+/**
+ * Processes one GPU "step": updates the mode, renders a scanline
+ * if appropriate, updates clock values and current line
+ */
 let step = (mCycles: int, renderer: Renderer.t, gpu: t) => {
   let modeclock = gpu.clock + mCycles;
   let gpu = {...gpu, clock: modeclock};
@@ -235,6 +244,10 @@ let step = (mCycles: int, renderer: Renderer.t, gpu: t) => {
   };
 };
 
-let read8 = _gpu => 0;
+let read8 = (addr, _gpu) => {
+  raise(NotImplemented(Printf.sprintf("GPU read %x", addr)));
+};
 
-let write8 = gpu => gpu;
+let write8 = (addr, v, _gpu) => {
+  raise(NotImplemented(Printf.sprintf("GPU write: %x to %x", v, addr)));
+};

@@ -1,3 +1,4 @@
+exception NotImplemented(string);
 exception AssertionException(string);
 
 /* 256 bytes */
@@ -81,7 +82,7 @@ let read8 = (addr, {mmu, gpu}: state) =>
   | 0x8000
   | 0x9000 => (gpu.vram[addr land 0x1fff], mmu) /* Video RAM */
   | 0xA000
-  | 0xB000 => (0, mmu) /* External RAM */
+  | 0xB000 => (mmu.externalRam[addr land 0x1fff], mmu) /* External RAM */
   /*
     Work RAM
     This removes the first nibble of the address
@@ -93,17 +94,23 @@ let read8 = (addr, {mmu, gpu}: state) =>
   | 0xE000 => (mmu.workRam[addr land 0x1fff], mmu)
   | 0xF000 =>
     switch (addr land 0x0f00) {
-    | 0xE00 => (0, mmu) /* OAM */
+    | 0xE00 when addr < 0xFEA0 =>
+      raise(NotImplemented(Printf.sprintf("GPU OAM: %x", addr))) /* OAM */
+    | 0xE00 => (0, mmu)
     | 0xF00 =>
       switch (addr) {
       | a when a >= 0xFF80 => (mmu.zeroPageRam[addr land 0x7f], mmu)
       | _ =>
         switch (addr land 0x00f0) {
+        | 0x10
+        | 0x20
+        | 0x30 => (0, mmu)
         | 0x40
         | 0x50
         | 0x60
-        | 0x70 => (Gpu.read8(gpu), mmu)
-        | _ => (0, mmu)
+        | 0x70 => (Gpu.read8(addr, gpu), mmu)
+        | _ =>
+          raise(NotImplemented(Printf.sprintf("MMU read8 0xF00: %x", addr)))
         }
       }
     | _ => (mmu.workRam[addr land 0x1fff], mmu) /* same as Work RAM above */
@@ -128,17 +135,25 @@ let write8 = (addr, v, {gpu, mmu}: state) => {
   if (v > 0xff) {
     raise(AssertionException(Printf.sprintf("Write8: %x %x", addr, v)));
   };
-  /* let {mmu, gpu} = state; */
-  // Js.log(Printf.sprintf("Writing %x to addr %x", v, addr));
   switch (addr land 0xf000) {
-  /* | 0x0000 | 0x1000  => */
+  | 0x0000
+  | 0x1000 =>
+    Js.log("Cart type something");
+    (mmu, gpu);
+  | 0x2000
+  | 0x3000 =>
+    // cart bank switch
+    raise(NotImplemented("Cart bank switch"))
+  | 0x4000
+  | 0x5000 => raise(NotImplemented("RAM bank switch"))
   | 0x6000
   | 0x7000 =>
     /* select memory model to use - 0: 16/8 mode, 1: 4/32 mode */
     let mode = v land 0x1;
-    (mmu, gpu);
+    raise(NotImplemented("Memory model " ++ string_of_int(mode)));
   | 0x8000
   | 0x9000 =>
+    Printf.printf("Writing to VRAM, addr  %x, v %x\n", addr land 0x1fff, v);
     gpu.vram[addr land 0x1fff] = v;
     Gpu.updateTile(addr, gpu);
     (mmu, gpu);
@@ -147,7 +162,53 @@ let write8 = (addr, v, {gpu, mmu}: state) => {
   | 0xE000 =>
     mmu.workRam[addr land 0x1fff] = v;
     (mmu, gpu);
-  | _ => (mmu, gpu)
+  | 0xF000 =>
+    switch (addr land 0xf00) {
+    | 0x000
+    | 0x100
+    | 0x200
+    | 0x300
+    | 0x400
+    | 0x500
+    | 0x600
+    | 0x700
+    | 0x800
+    | 0x900
+    | 0xA00
+    | 0xB00
+    | 0xC00
+    | 0xD00 =>
+      mmu.workRam[addr land 0x1fff] = v;
+      (mmu, gpu);
+    | 0xE00 =>
+      raise(
+        NotImplemented(Printf.sprintf("GPU update OAM: %x to %x", v, addr)),
+      )
+    | 0xF00 =>
+      switch (addr, addr land 0xf0) {
+      | (_, 0x10)
+      | (_, 0x20)
+      | (_, 0x30) => (mmu, gpu)
+      | (_, 0x40)
+      | (_, 0x50)
+      | (_, 0x60)
+      | (_, 0x70) => (mmu, Gpu.write8(addr, v, gpu))
+      | _ =>
+        raise(
+          NotImplemented(
+            Printf.sprintf("MMU write8 0xFF00: %x to %4x", v, addr),
+          ),
+        )
+      }
+    | _ =>
+      raise(
+        NotImplemented(
+          Printf.sprintf("MMU write8 0xF000: %x to %x", v, addr),
+        ),
+      )
+    }
+  | _ =>
+    raise(NotImplemented(Printf.sprintf("MMU write8: %x to %4x", v, addr)))
   };
 };
 
