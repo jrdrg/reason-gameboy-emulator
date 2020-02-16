@@ -1,30 +1,54 @@
 <!DOCTYPE html>
 <html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>reason-gb-emu</title>
+    <style>
+      #screen {
+        width: 320px;
+        height: 288px;
+      }
+      .fps {
+        position: absolute;
+        padding: 10px;
+        bottom: 0;
+        right: 0;
+      }
+      .debug {
+        display: flex;
+      }
+      .column {
+        flex: 1;
+      }
+    </style>
+  </head>
 
-<head>
-  <meta charset="UTF-8">
-  <title>reason-gb-emu</title>
-  <style>
-    #screen {
-      width: 320px;
-      height: 288px;
-    }
-    .fps {
-      position: absolute;
-      padding: 10px;
-      bottom: 0;
-      right: 0;
-    }
-  </style>
-</head>
+  <body>
+    <div id="app">
+      <canvas id="screen" width="160" height="144" />
+    </div>
+    <div class="debug">
+      <div class="controlflow column">
+        <div class="pc">PC <span id="pc"></span></div>
+        <div class="sp">SP <span id="sp"></span></div>
+      </div>
+      <div class="registers column">
+        <div class="ra">A <span id="ra"></span></div>
+        <div class="rb">B <span id="rb"></span></div>
+        <div class="rc">C <span id="rc"></span></div>
+        <div class="rd">D <span id="rd"></span></div>
+        <div class="re">E <span id="re"></span></div>
+        <div class="rh">H <span id="rh"></span></div>
+        <div class="rl">L <span id="rl"></span></div>
+        <div class="rf">F <span id="rf"></span></div>
+      </div>
+      <div class="instructions column">
+        Instructions
+        <pre id="instructions"></pre>
+      </div>
+    </div>
+    <div class="fps">FPS: <span id="fps-num">?</span></div>
 
-<body>
-  <div id="app">
-    <canvas id="screen" width="160" height="144" />
-  </div>
-  <div class="fps">FPS: <span id="fps-num">?</span></div>
-
-  <script src="../build/Index.js"></script>
-</body>
-
+    <script src="../build/Index.js"></script>
+  </body>
 </html>
